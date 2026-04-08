@@ -324,6 +324,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
     <div class="step-pill" data-step="3" id="pill-3">③ Evaluate</div>
     <div class="step-pill" data-step="4" id="pill-4">④ Results</div>
   </nav>
+  <button id="btn-admin-toggle" title="Admin panel" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px">⚙️ Admin</button>
   <button id="btn-logout">🔒 Lock</button>
 </header>
 
@@ -332,21 +333,10 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
 <!-- ═══════════════════════════════════════════ STEP 1: SETUP ═══ -->
 <div class="step-section active" id="step-setup">
   <div class="card">
-    <div class="card-title">🔑 Configure API Access</div>
-    <div class="disclaimer-box">
-      🔐 <strong>API Key Storage:</strong> Your key is encrypted with your login password and saved in this browser. It auto-loads next time you log in. Click <strong>Clear</strong> to remove it from all storage.
-    </div>
-    <div class="form-group">
-      <label>Anthropic API Key</label>
-      <div class="input-row">
-        <input type="password" class="form-control" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
-        <button class="btn btn-primary" id="btn-save-key">Save</button>
-        <button class="btn btn-secondary" id="btn-clear-key">Clear</button>
-      </div>
-    </div>
+    <div class="card-title">⚙️ Configuration</div>
     <div class="form-group">
       <label>Claude Model</label>
-      <select class="form-control" id="model-select" style="max-width:360px">
+      <select class="form-control" id="model-select" style="max-width:380px">
         <option value="claude-sonnet-4-5">claude-sonnet-4-5 — Recommended (fast, cost-effective)</option>
         <option value="claude-opus-4-5">claude-opus-4-5 — Most thorough (higher cost, slower)</option>
         <option value="claude-sonnet-4-6">claude-sonnet-4-6 — Latest Sonnet</option>
@@ -355,6 +345,38 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
     <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
       <button class="btn btn-outline btn-sm" id="btn-test-api">🔌 Test Connection</button>
       <span id="api-test-result" style="font-size:13px"></span>
+    </div>
+    <!-- hidden input kept for legacy code paths -->
+    <input type="hidden" id="api-key-input">
+  </div>
+
+  <!-- Admin panel -->
+  <div class="card" id="admin-card" style="border:2px solid var(--amber);display:none">
+    <div class="card-title">🔐 Admin — API Key Management</div>
+    <div id="admin-locked">
+      <div class="form-group" style="max-width:360px">
+        <label>Admin Password</label>
+        <div class="input-row">
+          <input type="password" class="form-control" id="admin-pw-input" placeholder="Enter admin password…">
+          <button class="btn btn-amber" id="btn-admin-unlock">Unlock</button>
+        </div>
+      </div>
+      <div id="admin-pw-error" style="font-size:13px;color:var(--red);margin-top:4px"></div>
+    </div>
+    <div id="admin-panel" style="display:none">
+      <div style="background:var(--green-l);border-radius:var(--r);padding:8px 14px;font-size:12px;color:#15803d;margin-bottom:14px">✅ Admin access granted</div>
+      <div id="admin-key-status" style="font-size:13px;color:var(--g500);margin-bottom:14px"></div>
+      <div class="form-group">
+        <label>New Anthropic API Key</label>
+        <div class="input-row">
+          <input type="password" class="form-control" id="admin-key-input" placeholder="sk-ant-api03-…" autocomplete="off">
+          <button class="btn btn-primary" id="btn-admin-save-key">Save to Server</button>
+        </div>
+      </div>
+      <div id="admin-save-result" style="font-size:13px;margin-top:6px"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--g500)">
+        The API key is stored securely on the Cloudflare server. It never reaches users' browsers.
+      </div>
     </div>
   </div>
   <div class="card">
@@ -556,8 +578,9 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
 <!-- A: AppState -->
 <script>
 var AppState = {
-  apiKey: sessionStorage.getItem('gbx_eval_key') || '',
+  apiKey: '',
   sessionPassword: '',
+  adminPassword: '',
   model: 'claude-sonnet-4-5',
   files: [],
   combinedText: '',
@@ -573,6 +596,14 @@ var AppState = {
 
 <!-- B: Constants & Prompts -->
 <script>
+// ── Cloudflare Worker proxy URL ──────────────────────────────────
+// Set this to your deployed Worker URL after Cloudflare setup.
+// Format: https://gbx-proxy.YOUR-SUBDOMAIN.workers.dev
+var WORKER_URL = '';   // <-- fill in after deploying the Worker
+
+// Admin panel password hash (SHA-256 of "GBXadmin")
+var ADMIN_PASSWORD_HASH = 'f8cd39d3eb58359347dfe44183a52bec79fede0779e05ddfc154f9de7aa9ba58';
+
 var TENDER_REF = 'ITT FINHQ0ETT26000001';
 var TENDER_CLOSING = '15 May 2026, 4:00pm';
 var BRIEFING_DATE = '13 April 2026';
@@ -878,16 +909,14 @@ function estimateCost(tokens){ return (tokens*3/1000000 + 12000*15/1000000).toFi
 
 <!-- D: Claude API -->
 <script>
+function getAPIEndpoint(){ return (WORKER_URL||'').replace(/\/+$/,'') + '/v1/messages'; }
+
 async function callClaude(systemPrompt, userMessage, maxTokens){
   maxTokens = maxTokens||8000;
-  var resp = await fetch('https://api.anthropic.com/v1/messages',{
+  if(!WORKER_URL) throw new Error('Worker URL not configured. Ask your administrator to complete Cloudflare setup.');
+  var resp = await fetch(getAPIEndpoint(),{
     method:'POST',
-    headers:{
-      'x-api-key': AppState.apiKey,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true',
-      'content-type':'application/json'
-    },
+    headers:{'content-type':'application/json'},
     body: JSON.stringify({
       model: AppState.model,
       max_tokens: maxTokens,
@@ -897,21 +926,17 @@ async function callClaude(systemPrompt, userMessage, maxTokens){
   });
   if(!resp.ok){
     var err = await resp.json().catch(function(){ return {}; });
-    throw new Error((err.error && err.error.message)||('API error '+resp.status));
+    throw new Error((err.error && err.error.message)||(err.error)||('API error '+resp.status));
   }
   var data = await resp.json();
   return data.content[0].text;
 }
 
 async function callClaudeStream(messages, systemPrompt, onChunk, onDone){
-  var resp = await fetch('https://api.anthropic.com/v1/messages',{
+  if(!WORKER_URL) throw new Error('Worker URL not configured.');
+  var resp = await fetch(getAPIEndpoint(),{
     method:'POST',
-    headers:{
-      'x-api-key': AppState.apiKey,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true',
-      'content-type':'application/json'
-    },
+    headers:{'content-type':'application/json'},
     body: JSON.stringify({
       model: AppState.model,
       max_tokens: 2000,
@@ -961,13 +986,20 @@ function parseJSONFromResponse(text){
 
 async function testAPIConnection(){
   var el = document.getElementById('api-test-result');
-  el.textContent='Testing…';
+  el.textContent='Testing…'; el.style.color='var(--g500)';
+  if(!WORKER_URL){ el.textContent='⚠️ Worker URL not set — see admin setup'; el.style.color='var(--amber-d)'; return; }
   try{
-    var r = await callClaude('You are a test assistant.','Reply with exactly: {"ok":true}',100);
-    el.textContent='✅ Connected — API key valid';
-    el.style.color='var(--green)';
+    var resp = await fetch(WORKER_URL.replace(/\/+$/,'')+'/health');
+    var data = await resp.json();
+    if(data.configured){
+      el.textContent='✅ Connected — API key configured on server';
+      el.style.color='var(--green)';
+    } else {
+      el.textContent='⚠️ Worker reachable but API key not yet set — use Admin panel';
+      el.style.color='var(--amber-d)';
+    }
   }catch(e){
-    el.textContent='❌ '+e.message;
+    el.textContent='❌ Cannot reach Worker: '+e.message;
     el.style.color='var(--red)';
   }
 }
@@ -1813,6 +1845,28 @@ async function processFiles(fileList){
   updateTokenDisplay();
 }
 
+async function loadAdminKeyStatus(){
+  var el = document.getElementById('admin-key-status');
+  if(!WORKER_URL){ el.textContent='⚠️ Worker URL not configured in HTML yet.'; el.style.color='var(--amber-d)'; return; }
+  el.textContent='Checking server…'; el.style.color='var(--g500)';
+  try{
+    var resp = await fetch(WORKER_URL.replace(/\/+$/,'')+'/admin/test-key',{
+      headers:{'Authorization':'Bearer '+AppState.adminPassword}
+    });
+    var data = await resp.json();
+    if(data.configured){
+      el.textContent='✅ API key is set on server: '+data.preview;
+      el.style.color='var(--green)';
+    } else {
+      el.textContent='⚠️ No API key stored yet — enter one below.';
+      el.style.color='var(--amber-d)';
+    }
+  }catch(e){
+    el.textContent='❌ Could not reach Worker: '+e.message;
+    el.style.color='var(--red)';
+  }
+}
+
 function init(){
   // Initialise auth (login screen)
   initAuth();
@@ -1820,38 +1874,59 @@ function init(){
   // Set pdf.js worker
   if(typeof pdfjsLib!=='undefined') pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // Restore API key
-  if(AppState.apiKey) document.getElementById('api-key-input').value=AppState.apiKey;
-
-  // API key save — encrypts and persists across sessions
-  document.getElementById('btn-save-key').addEventListener('click', async function(){
-    var key = document.getElementById('api-key-input').value.trim();
-    if(!key){ document.getElementById('api-test-result').textContent='Please enter an API key first.'; return; }
-    AppState.apiKey = key;
-    sessionStorage.setItem('gbx_eval_key', key);
-    var resultEl = document.getElementById('api-test-result');
-    if(AppState.sessionPassword){
-      try{
-        var enc = await encryptAPIKey(key, AppState.sessionPassword);
-        localStorage.setItem('gbx_enc_key', enc);
-        resultEl.textContent = '✅ API key saved — auto-loads on next login';
-        resultEl.style.color = 'var(--green)';
-      }catch(e){
-        resultEl.textContent = '✅ Key saved to session (encryption failed: '+e.message+')';
-        resultEl.style.color = 'var(--amber)';
-      }
-    } else {
-      resultEl.textContent = '✅ Key saved to session';
-      resultEl.style.color = 'var(--green)';
-    }
+  // Admin toggle button (header)
+  document.getElementById('btn-admin-toggle').addEventListener('click', function(){
+    var card = document.getElementById('admin-card');
+    var visible = card.style.display !== 'none';
+    card.style.display = visible ? 'none' : 'block';
+    if(!visible){ showStep(1); card.scrollIntoView({behavior:'smooth',block:'center'}); }
   });
-  document.getElementById('btn-clear-key').addEventListener('click',function(){
-    AppState.apiKey='';
-    sessionStorage.removeItem('gbx_eval_key');
-    localStorage.removeItem('gbx_enc_key');
-    document.getElementById('api-key-input').value='';
-    document.getElementById('api-test-result').textContent='Key cleared from all storage';
-    document.getElementById('api-test-result').style.color='var(--g500)';
+
+  // Admin unlock
+  document.getElementById('btn-admin-unlock').addEventListener('click', async function(){
+    var pw = document.getElementById('admin-pw-input').value;
+    var errEl = document.getElementById('admin-pw-error');
+    var hash = await sha256(pw);
+    if(hash !== ADMIN_PASSWORD_HASH){ errEl.textContent='Incorrect admin password.'; return; }
+    errEl.textContent='';
+    AppState.adminPassword = pw;
+    document.getElementById('admin-locked').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    // Show current key status
+    loadAdminKeyStatus();
+  });
+  document.getElementById('admin-pw-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter') document.getElementById('btn-admin-unlock').click();
+  });
+
+  // Admin: save API key to Worker
+  document.getElementById('btn-admin-save-key').addEventListener('click', async function(){
+    var key = document.getElementById('admin-key-input').value.trim();
+    var resEl = document.getElementById('admin-save-result');
+    if(!key||!key.startsWith('sk-ant-')){ resEl.textContent='❌ Key must start with sk-ant-'; resEl.style.color='var(--red)'; return; }
+    if(!WORKER_URL){ resEl.textContent='❌ WORKER_URL not set in HTML yet.'; resEl.style.color='var(--red)'; return; }
+    this.disabled=true; this.textContent='Saving…';
+    try{
+      var resp = await fetch(WORKER_URL.replace(/\/+$/,'')+'/admin/set-key',{
+        method:'POST',
+        headers:{'content-type':'application/json','Authorization':'Bearer '+AppState.adminPassword},
+        body:JSON.stringify({apiKey:key})
+      });
+      var data = await resp.json();
+      if(data.success){
+        resEl.textContent='✅ API key saved to server successfully';
+        resEl.style.color='var(--green)';
+        document.getElementById('admin-key-input').value='';
+        loadAdminKeyStatus();
+      } else {
+        resEl.textContent='❌ '+(data.error||'Unknown error');
+        resEl.style.color='var(--red)';
+      }
+    }catch(e){
+      resEl.textContent='❌ '+e.message;
+      resEl.style.color='var(--red)';
+    }
+    this.disabled=false; this.textContent='Save to Server';
   });
   document.getElementById('btn-test-api').addEventListener('click',testAPIConnection);
   document.getElementById('model-select').addEventListener('change',function(){ AppState.model=this.value; });
