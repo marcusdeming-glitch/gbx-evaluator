@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GBX Tender Evaluator | ITT FINHQ0ETT26000001</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#1a3a5c;--navy-l:#2a5080;--navy-d:#0f2340;
+  --amber:#f59e0b;--amber-l:#fef3c7;--amber-d:#d97706;
+  --red:#dc2626;--red-l:#fee2e2;
+  --green:#16a34a;--green-l:#dcfce7;
+  --blue:#2563eb;--blue-l:#dbeafe;
+  --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g300:#d1d5db;
+  --g500:#6b7280;--g700:#374151;--g900:#111827;
+  --font:system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:8px;--sh:0 2px 8px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--g50);color:var(--g900);padding-bottom:80px}
+a{color:var(--navy)}
+
+/* HEADER */
+#app-header{background:var(--navy);color:#fff;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-logo{width:38px;height:38px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.header-logo svg{width:26px;height:26px}
+.header-title h1{font-size:17px;font-weight:700;line-height:1.2}
+.header-title p{font-size:11px;opacity:.75;margin-top:1px}
+.step-nav{display:flex;gap:6px}
+.step-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:default;transition:all .2s;opacity:.5;background:rgba(255,255,255,.15);color:#fff;white-space:nowrap}
+.step-pill.active{background:#fff;color:var(--navy);opacity:1}
+.step-pill.done{background:rgba(255,255,255,.35);opacity:.9}
+
+/* MAIN */
+main{max-width:1100px;margin:0 auto;padding:28px 20px}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:24px;margin-bottom:20px}
+.card-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px}
+
+/* STEPS */
+.step-section{display:none}
+.step-section.active{display:block}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:var(--navy-l)}
+.btn-secondary{background:var(--g200);color:var(--g700)}.btn-secondary:hover{background:var(--g300)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#15803d}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:var(--amber-d)}
+.btn-outline{background:transparent;color:var(--navy);border:2px solid var(--navy)}.btn-outline:hover{background:var(--navy);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-lg{padding:12px 28px;font-size:15px}
+.btn-sm{padding:6px 14px;font-size:12px}
+
+/* FORM */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--g700);margin-bottom:6px}
+.form-control{width:100%;padding:9px 13px;border:2px solid var(--g200);border-radius:var(--r);font-size:14px;font-family:var(--font);transition:border-color .15s}
+.form-control:focus{outline:none;border-color:var(--navy)}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+.input-row .form-control{flex:1}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.badge-green{background:var(--green-l);color:#15803d}
+.badge-red{background:var(--red-l);color:#b91c1c}
+.badge-amber{background:var(--amber-l);color:#b45309}
+.badge-blue{background:var(--blue-l);color:#1d4ed8}
+.badge-grey{background:var(--g200);color:var(--g700)}
+.badge-navy{background:var(--navy);color:#fff}
+.badge-xl{font-size:15px;padding:8px 20px;border-radius:20px}
+
+/* DROP ZONE */
+#drop-zone{border:2.5px dashed var(--g300);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;background:var(--g50)}
+#drop-zone:hover,#drop-zone.dragover{border-color:var(--navy);background:var(--blue-l)}
+#drop-zone .dz-icon{font-size:40px;display:block;margin-bottom:10px}
+#drop-zone .dz-text{font-size:15px;font-weight:600;color:var(--g700)}
+#drop-zone .dz-sub{font-size:12px;color:var(--g500);margin-top:6px}
+
+/* FILE TREE */
+#file-tree{margin-top:16px}
+.file-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;margin-bottom:4px;background:var(--g50);border:1px solid var(--g200);font-size:13px}
+.file-row.child{margin-left:24px;background:#fff}
+.file-row .file-icon{font-size:18px;flex-shrink:0}
+.file-row .file-name{flex:1;font-weight:500;word-break:break-all}
+.file-row .file-size{color:var(--g500);font-size:11px;white-space:nowrap}
+.file-row .file-status{flex-shrink:0}
+
+/* TOKEN BAR */
+.token-info{background:var(--blue-l);border:1px solid #bfdbfe;border-radius:var(--r);padding:10px 14px;font-size:13px;color:#1d4ed8;margin-top:12px;display:flex;align-items:center;gap:8px}
+.token-warn{background:var(--amber-l);border-color:#fde68a;color:#b45309}
+
+/* STATUS LOG */
+#status-log{background:var(--g900);color:#e5e7eb;border-radius:var(--r);padding:16px;font-family:'Consolas','Courier New',monospace;font-size:12px;min-height:120px;max-height:280px;overflow-y:auto;margin-top:12px}
+#status-log .log-line{margin-bottom:4px;line-height:1.5}
+#status-log .log-ok{color:#4ade80}
+#status-log .log-warn{color:#fbbf24}
+#status-log .log-err{color:#f87171}
+
+/* RESULTS — OVERALL */
+#results-header{background:var(--navy);color:#fff;border-radius:var(--r);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.results-meta{font-size:12px;opacity:.8}
+.results-meta span{display:inline-block;margin-right:16px}
+.overall-status{text-align:right}
+.overall-score-boxes{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+.score-box{background:rgba(255,255,255,.12);border-radius:var(--r);padding:12px 18px;text-align:center}
+.score-box .sb-val{font-size:26px;font-weight:800}
+.score-box .sb-label{font-size:11px;opacity:.8;margin-top:2px}
+
+/* STAGE 1 GRID */
+.s1-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.s1-card{border:2px solid var(--g200);border-radius:var(--r);padding:14px 16px}
+.s1-card.pass{border-color:#bbf7d0}
+.s1-card.fail{border-color:#fecaca}
+.s1-card.uncertain{border-color:#fde68a}
+.s1-card-title{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:8px}
+.s1-card-evidence{font-size:12px;color:var(--g500);margin-top:8px;line-height:1.5}
+
+/* STAGE 2 CRITERIA */
+.s2-criterion{border:1px solid var(--g200);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.s2-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#fff;transition:background .15s}
+.s2-header:hover{background:var(--g50)}
+.s2-title{flex:1;font-size:14px;font-weight:600}
+.s2-score{font-size:18px;font-weight:800;color:var(--navy);white-space:nowrap}
+.s2-score span{font-size:12px;font-weight:400;color:var(--g500)}
+.s2-bar-wrap{flex:0 0 140px;height:8px;background:var(--g200);border-radius:4px;overflow:hidden}
+.s2-bar{height:100%;background:var(--navy);border-radius:4px;transition:width .5s}
+.s2-body{padding:14px 16px;border-top:1px solid var(--g100);display:none;background:var(--g50)}
+.s2-body.open{display:block}
+.s2-section{margin-bottom:12px}
+.s2-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g500);margin-bottom:6px}
+.s2-pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px}
+.pill-green{background:var(--green-l);color:#15803d}
+.pill-red{background:var(--red-l);color:#b91c1c}
+.pill-blue{background:var(--blue-l);color:#1d4ed8}
+.pill-amber{background:var(--amber-l);color:#b45309}
+
+/* CHECKLIST */
+.checklist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:var(--r);background:#fff;border:1px solid var(--g200)}
+.cl-item.present{border-left:3px solid var(--green)}
+.cl-item.partial{border-left:3px solid var(--amber)}
+.cl-item.missing{border-left:3px solid var(--red);background:var(--red-l)}
+.cl-item.uncertain{border-left:3px solid var(--g300)}
+.cl-name{flex:1;font-size:13px;font-weight:500}
+.cl-notes{font-size:11px;color:var(--g500);margin-top:3px}
+.cl-num{font-size:11px;font-weight:700;color:var(--g500);flex-shrink:0;width:22px}
+
+/* FLAGS */
+.flags-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.flags-grid{grid-template-columns:1fr}}
+.flag-col{border-radius:var(--r);overflow:hidden;border:1px solid var(--g200)}
+.flag-col-header{padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.flag-col-header.red{background:var(--red-l);color:#b91c1c}
+.flag-col-header.amber{background:var(--amber-l);color:#b45309}
+.flag-col-header.blue{background:var(--blue-l);color:#1d4ed8}
+.flag-item{padding:10px 14px;border-top:1px solid var(--g100);font-size:12px;background:#fff}
+.flag-item:first-child{border-top:none}
+.flag-crit{font-weight:600;color:var(--g700);margin-bottom:3px}
+.flag-desc{color:var(--g700);line-height:1.5}
+.flag-ref{color:var(--g500);font-size:11px;margin-top:3px;font-style:italic}
+.flag-empty{padding:14px;text-align:center;color:var(--g500);font-size:13px}
+
+/* STRENGTHS */
+.strengths-list{display:flex;flex-wrap:wrap;gap:8px}
+.strength-pill{background:var(--green-l);color:#15803d;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500}
+
+/* CHARTS */
+.charts-row{display:flex;gap:20px;flex-wrap:wrap}
+.chart-card{flex:1;min-width:280px;background:#fff;border-radius:var(--r);border:1px solid var(--g200);padding:18px;text-align:center}
+.chart-card h3{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:14px}
+.chart-card canvas{max-height:280px}
+
+/* REPORT BAR */
+#report-bar{background:var(--navy-d);color:#fff;padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;border-radius:var(--r)}
+.report-meta{font-size:12px;opacity:.8;flex:1}
+.report-meta strong{font-weight:600}
+
+/* CHAT PANEL */
+#chat-toggle{position:fixed;bottom:0;right:24px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:600;cursor:pointer;display:none;z-index:200;border:none;transition:background .15s}
+#chat-toggle:hover{background:var(--navy-l)}
+#chat-panel{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--navy);box-shadow:0 -4px 20px rgba(0,0,0,.15);display:none;z-index:199;flex-direction:column;height:360px}
+#chat-panel.open{display:flex}
+.chat-header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.chat-header h3{font-size:14px;font-weight:600}
+.chat-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+.chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--g50)}
+.chat-msg{max-width:75%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.6}
+.chat-msg.user{background:var(--navy);color:#fff;align-self:flex-end;border-radius:12px 12px 3px 12px}
+.chat-msg.assistant{background:#fff;color:var(--g900);align-self:flex-start;border:1px solid var(--g200);border-radius:12px 12px 12px 3px}
+.chat-msg.assistant .msg-label{font-size:10px;font-weight:700;color:var(--g500);margin-bottom:4px}
+.chat-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--g200);background:#fff}
+.chat-input-row input{flex:1;padding:8px 12px;border:2px solid var(--g200);border-radius:var(--r);font-size:13px;font-family:var(--font)}
+.chat-input-row input:focus{outline:none;border-color:var(--navy)}
+.chat-disclaimer{font-size:10px;color:var(--g500);padding:4px 14px;background:#fff;border-top:1px solid var(--g100)}
+
+/* DISCLAIMER */
+.disclaimer-box{background:var(--amber-l);border:1px solid #fde68a;border-radius:var(--r);padding:12px 16px;font-size:12px;color:#92400e;margin-bottom:16px}
+
+/* DIVIDER */
+.section-divider{height:1px;background:var(--g200);margin:24px 0}
+
+/* SPINNER */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--g300);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* NAV ROW */
+.nav-row{display:flex;gap:10px;margin-top:16px;align-items:center}
+.nav-row .spacer{flex:1}
+
+/* ACCORDION TOGGLE */
+.chevron{display:inline-block;transition:transform .2s;margin-left:4px}
+.chevron.open{transform:rotate(180deg)}
+
+/* PROGRESS BAR (generic) */
+.progress-wrap{height:6px;background:var(--g200);border-radius:3px;overflow:hidden;margin:6px 0}
+.progress-bar{height:100%;background:var(--navy);border-radius:3px;transition:width .4s}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .flags-grid{grid-template-columns:1fr}
+  .s1-grid{grid-template-columns:1fr}
+  .charts-row{flex-direction:column}
+  .step-pill{display:none}
+  .step-pill.active{display:flex}
+  #report-bar{flex-direction:column;align-items:flex-start}
+}
+
+/* ═══ LOGIN OVERLAY ═══ */
+#login-overlay{position:fixed;inset:0;background:var(--navy-d);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-card{background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+.login-logo{width:64px;height:64px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.login-logo svg{width:44px;height:44px}
+.login-title{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--g500);margin-bottom:28px;line-height:1.5}
+.login-input-wrap{position:relative;margin-bottom:14px}
+.login-input-wrap input{width:100%;padding:12px 44px 12px 16px;border:2px solid var(--g200);border-radius:var(--r);font-size:15px;font-family:var(--font);transition:border-color .15s}
+.login-input-wrap input:focus{outline:none;border-color:var(--navy)}
+.login-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--g500);padding:0}
+.login-btn{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;margin-bottom:10px}
+.login-btn:hover{background:var(--navy-l)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-error{color:var(--red);font-size:13px;margin-top:4px;min-height:18px}
+.login-footer{font-size:10px;color:var(--g500);margin-top:20px;line-height:1.6;border-top:1px solid var(--g100);padding-top:14px}
+.login-change-pw{margin-top:16px;border-top:1px solid var(--g100);padding-top:14px}
+.login-change-pw summary{font-size:12px;color:var(--g500);cursor:pointer;user-select:none}
+.login-change-pw summary:hover{color:var(--navy)}
+.login-change-pw .gen-wrap{margin-top:10px;text-align:left}
+.login-change-pw .gen-wrap label{font-size:11px;font-weight:600;color:var(--g700);display:block;margin-bottom:4px}
+.login-change-pw .gen-wrap input{width:100%;padding:7px 10px;border:1px solid var(--g200);border-radius:6px;font-size:13px;margin-bottom:6px;font-family:var(--font)}
+.login-change-pw .hash-out{background:var(--g100);border-radius:6px;padding:8px;font-size:11px;font-family:'Consolas','Courier New',monospace;word-break:break-all;color:var(--g700);min-height:32px;cursor:text;user-select:all}
+.login-change-pw .gen-note{font-size:10px;color:var(--g500);margin-top:6px;line-height:1.5}
+/* logout btn in header */
+#btn-logout{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;display:none;transition:background .15s;margin-left:10px}
+#btn-logout:hover{background:rgba(255,255,255,.3)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ LOGIN OVERLAY ════ -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" fill="#fff"/>
+        <text x="20" y="26" text-anchor="middle" font-size="16" font-weight="bold" fill="#1a3a5c" font-family="system-ui">G</text>
+      </svg>
+    </div>
+    <div class="login-title">GBX Tender Evaluator</div>
+    <div class="login-sub">Ministry of Finance, Singapore<br>ITT FINHQ0ETT26000001 · Authorised Access Only</div>
+    <div class="login-input-wrap">
+      <input type="password" id="login-pw-input" placeholder="Enter access password" autocomplete="current-password">
+      <button class="login-eye" id="login-eye-btn" title="Show/hide password">👁</button>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" id="login-btn">Access Evaluation Tool</button>
+    <div class="login-footer">
+      🔒 This tool is for authorised MOF evaluation officers only.<br>
+      Uploaded documents are processed by Anthropic Claude AI.<br>
+      Ensure compliance with your data classification policy before uploading sensitive documents.
+    </div>
+    <details class="login-change-pw">
+      <summary>⚙ Administrator: Change Password</summary>
+      <div class="gen-wrap">
+        <label>Enter desired new password to generate its hash:</label>
+        <input type="text" id="gen-pw-input" placeholder="Type new password here…" autocomplete="off">
+        <button class="btn btn-secondary btn-sm" id="gen-hash-btn" style="width:100%;margin-bottom:8px">Generate Hash</button>
+        <div class="hash-out" id="hash-out">Hash will appear here — copy and paste into PASSWORD_HASH in the HTML source</div>
+        <div class="gen-note">📋 Copy the hash above → open gebizx-evaluator.html in a text editor → find <strong>PASSWORD_HASH</strong> → replace the value → re-upload to GitHub.</div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ HEADER ═══════════ -->
+<header id="app-header">
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" fill="#1a3a5c"/>
+        <text x="20" y="26" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="system-ui">G</text>
+      </svg>
+    </div>
+    <div class="header-title">
+      <h1>GBX Tender Evaluator</h1>
+      <p>ITT FINHQ0ETT26000001 · Ministry of Finance, Singapore</p>
+    </div>
+  </div>
+  <nav class="step-nav" id="step-nav">
+    <div class="step-pill active" data-step="1" id="pill-1">① Setup</div>
+    <div class="step-pill" data-step="2" id="pill-2">② Upload</div>
+    <div class="step-pill" data-step="3" id="pill-3">③ Evaluate</div>
+    <div class="step-pill" data-step="4" id="pill-4">④ Results</div>
+  </nav>
+  <button id="btn-logout">🔒 Lock</button>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════════════════════ STEP 1: SETUP ═══ -->
+<div class="step-section active" id="step-setup">
+  <div class="card">
+    <div class="card-title">🔑 Configure API Access</div>
+    <div class="disclaimer-box">
+      ⚠️ <strong>Important:</strong> This tool uses Anthropic Claude AI to analyse tender submissions. A valid Anthropic API key is required. Your key is stored only in this browser session and is cleared when you close this tab.
+    </div>
+    <div class="form-group">
+      <label>Anthropic API Key</label>
+      <div class="input-row">
+        <input type="password" class="form-control" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+        <button class="btn btn-primary" id="btn-save-key">Save</button>
+        <button class="btn btn-secondary" id="btn-clear-key">Clear</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Claude Model</label>
+      <select class="form-control" id="model-select" style="max-width:360px">
+        <option value="claude-sonnet-4-5">claude-sonnet-4-5 — Recommended (fast, cost-effective)</option>
+        <option value="claude-opus-4-5">claude-opus-4-5 — Most thorough (higher cost, slower)</option>
+        <option value="claude-sonnet-4-6">claude-sonnet-4-6 — Latest Sonnet</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+      <button class="btn btn-outline btn-sm" id="btn-test-api">🔌 Test Connection</button>
+      <span id="api-test-result" style="font-size:13px"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">ℹ️ About This Tool</div>
+    <p style="font-size:13px;color:var(--g700);line-height:1.7">This tool evaluates tender proposals against the GBX procurement system tender (<strong>ITT FINHQ0ETT26000001</strong>). Upload a bidder's submission in any format (PDF, Word, Excel, ZIP bundles), and Claude AI will assess it against the 4-stage evaluation framework, identify gaps, and flag items requiring human review or bidder clarification.</p>
+    <ul style="font-size:13px;color:var(--g700);line-height:1.9;margin-top:10px;padding-left:20px">
+      <li>Stage 1 — Critical pass/fail criteria (debarment, GRA, briefing, Ivalua SaaS)</li>
+      <li>Stage 2 — Proposal quality scoring (100 points across 7 criteria)</li>
+      <li>Submission completeness check (18 required sections)</li>
+      <li>Downloadable PDF and Excel evaluation reports</li>
+      <li>Chat Q&amp;A interface for querying specific details</li>
+    </ul>
+  </div>
+  <div class="nav-row"><div class="spacer"></div><button class="btn btn-primary btn-lg" id="btn-step1-next">Next: Upload Files →</button></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ STEP 2: UPLOAD ═══ -->
+<div class="step-section" id="step-upload">
+  <div class="card">
+    <div class="card-title">📂 Upload Submission Documents</div>
+    <div id="drop-zone">
+      <span class="dz-icon">📦</span>
+      <div class="dz-text">Drop tender submission files here, or click to browse</div>
+      <div class="dz-sub">Accepted: .pdf · .docx · .xlsx · .csv · .txt · .zip · .pptx · .jpg · .png</div>
+      <div class="dz-sub" style="margin-top:4px;color:var(--amber-d)">ZIP files are automatically extracted</div>
+    </div>
+    <input type="file" id="file-input" multiple accept=".pdf,.docx,.xlsx,.csv,.txt,.zip,.pptx,.jpg,.png" style="display:none">
+    <div id="file-tree" style="margin-top:14px"></div>
+    <div id="token-display" style="margin-top:10px;display:none">
+      <div class="token-info" id="token-info-box">
+        <span>📊</span>
+        <span id="token-text">Calculating...</span>
+      </div>
+    </div>
+    <div id="size-warning" style="display:none">
+      <div class="token-info token-warn" style="margin-top:8px">⚠️ <span id="size-warn-text"></span></div>
+    </div>
+  </div>
+  <div class="nav-row">
+    <button class="btn btn-secondary" id="btn-step2-back">← Back</button>
+    <button class="btn btn-danger btn-sm" id="btn-clear-files">🗑 Clear All</button>
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-lg" id="btn-step2-next">Next: Evaluate →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ STEP 3: EVALUATE ═ -->
+<div class="step-section" id="step-evaluate">
+  <div class="card">
+    <div class="card-title">🔍 Start AI Evaluation</div>
+    <div class="disclaimer-box">
+      ⚠️ <strong>AI-Assisted Pre-Evaluation:</strong> This tool provides AI-assisted analysis to support the evaluation process. All scores, findings, and flags <strong>must be reviewed and validated</strong> by authorised evaluators before official use. This output does not constitute an official evaluation decision.
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="score-box" style="background:var(--g100);border-radius:var(--r);padding:12px 18px;text-align:center;color:var(--g700)">
+        <div style="font-size:22px;font-weight:800" id="eval-file-count">—</div>
+        <div style="font-size:11px;margin-top:2px">Files loaded</div>
+      </div>
+      <div class="score-box" style="background:var(--g100);border-radius:var(--r);padding:12px 18px;text-align:center;color:var(--g700)">
+        <div style="font-size:22px;font-weight:800" id="eval-token-count">—</div>
+        <div style="font-size:11px;margin-top:2px">Est. tokens</div>
+      </div>
+      <div class="score-box" style="background:var(--g100);border-radius:var(--r);padding:12px 18px;text-align:center;color:var(--g700)">
+        <div style="font-size:22px;font-weight:800" id="eval-cost-est">—</div>
+        <div style="font-size:11px;margin-top:2px">Est. API cost</div>
+      </div>
+    </div>
+    <div class="form-group" style="max-width:360px">
+      <label>Your Name (for evaluation report)</label>
+      <input type="text" class="form-control" id="evaluator-name-input" placeholder="Evaluating Officer name">
+    </div>
+    <button class="btn btn-primary btn-lg" id="btn-run-eval" style="margin-top:8px">🔍 Start Evaluation</button>
+    <div id="status-log" style="margin-top:14px"><div style="color:#9ca3af;font-style:italic">Waiting to start evaluation…</div></div>
+  </div>
+  <div class="nav-row"><button class="btn btn-secondary" id="btn-step3-back">← Back</button></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ STEP 4: RESULTS ══ -->
+<div class="step-section" id="step-results">
+
+  <!-- Report bar -->
+  <div id="report-bar">
+    <div class="report-meta">
+      <strong>Evaluator:</strong> <span id="rpt-evaluator">—</span> &nbsp;|&nbsp;
+      <strong>Bidder:</strong> <span id="rpt-bidder">—</span> &nbsp;|&nbsp;
+      <strong>Evaluated:</strong> <span id="rpt-date">—</span>
+    </div>
+    <button class="btn btn-success btn-sm" id="btn-dl-pdf">📄 Download PDF Report</button>
+    <button class="btn btn-amber btn-sm" id="btn-dl-excel">📊 Download Excel Report</button>
+    <button class="btn btn-secondary btn-sm" id="btn-new-eval">🔄 New Evaluation</button>
+  </div>
+
+  <!-- Overall status -->
+  <div id="results-header">
+    <div>
+      <div style="font-size:12px;opacity:.7;margin-bottom:4px">ITT FINHQ0ETT26000001 · GeBIZ X Procurement System</div>
+      <div id="rpt-bidder-full" style="font-size:20px;font-weight:800;margin-bottom:4px">Bidder Evaluation</div>
+      <div class="results-meta">
+        <span>Files: <strong id="r-files">—</strong></span>
+        <span>Model: <strong id="r-model">—</strong></span>
+        <span>Tokens: <strong id="r-tokens">—</strong></span>
+      </div>
+    </div>
+    <div class="overall-status">
+      <div id="r-overall-badge" class="badge badge-xl badge-grey">Evaluating…</div>
+      <div class="overall-score-boxes">
+        <div class="score-box">
+          <div class="sb-val" id="r-s2-score">—</div>
+          <div class="sb-label">Stage 2 Score /100</div>
+        </div>
+        <div class="score-box">
+          <div class="sb-val" id="r-s2-weighted">—</div>
+          <div class="sb-label">Stage 2 (30% weight)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--amber-l);border:1px solid #fde68a;border-radius:var(--r);padding:9px 14px;font-size:12px;color:#92400e;margin-bottom:14px">
+    ⚠️ Stage 3 (Demonstration) and Price Competitiveness scores are pending live assessment. Overall Stage 4 final score cannot be computed at this stage.
+  </div>
+
+  <!-- Stage 1 -->
+  <div class="card">
+    <div class="card-title">🛡️ Stage 1 — Critical Pass/Fail Criteria <span id="r-s1-badge" class="badge badge-grey">—</span></div>
+    <div id="panel-stage1" class="s1-grid"></div>
+    <div id="r-s1-disq" style="margin-top:10px;display:none" class="token-info" style="background:var(--red-l);border-color:#fecaca;color:#b91c1c"></div>
+  </div>
+
+  <!-- Stage 2 -->
+  <div class="card">
+    <div class="card-title">📋 Stage 2 — Proposal Quality &nbsp;<span id="r-s2-total" style="font-size:22px;font-weight:800;color:var(--navy)">—</span><span style="font-size:13px;color:var(--g500)">/100</span></div>
+    <div id="panel-stage2"></div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="card">
+    <div class="card-title">✅ Submission Completeness <span id="r-cl-summary" class="badge badge-grey" style="margin-left:4px">—/18</span></div>
+    <div id="cl-critical" style="margin-bottom:10px;display:none"></div>
+    <div id="panel-checklist" class="checklist-grid"></div>
+  </div>
+
+  <!-- Flags -->
+  <div class="card">
+    <div class="card-title">🚩 Evaluation Flags</div>
+    <div id="panel-flags" class="flags-grid"></div>
+  </div>
+
+  <!-- Strengths -->
+  <div class="card">
+    <div class="card-title">✨ Notable Strengths</div>
+    <div id="panel-strengths" class="strengths-list"></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="card">
+    <div class="card-title">📊 Visual Summary</div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>Stage 2 — Criteria Breakdown (%)</h3>
+        <canvas id="chart-radar" width="300" height="280"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Stage 2 — Overall Score</h3>
+        <canvas id="chart-gauge" width="300" height="200"></canvas>
+        <div id="gauge-label" style="font-size:28px;font-weight:800;color:var(--navy);margin-top:-20px">—</div>
+        <div style="font-size:12px;color:var(--g500)">out of 100 points</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- end step-results -->
+
+</main>
+
+<!-- ═══════════════════════════════════════════ CHAT PANEL ════════ -->
+<button id="chat-toggle">💬 Ask Claude About This Submission ▲</button>
+<div id="chat-panel">
+  <div class="chat-header">
+    <h3>💬 Ask Claude — Submission Q&amp;A</h3>
+    <button class="chat-close" id="chat-close-btn">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg assistant">
+      <div class="msg-label">CLAUDE ASSISTANT</div>
+      Hi! I've reviewed the uploaded submission documents. Ask me anything about this bid — e.g. "What did the bidder propose for data migration?" or "Who are the key personnel?"
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="Ask a question about the submission…" autocomplete="off">
+    <button class="btn btn-primary btn-sm" id="btn-chat-send">Send</button>
+    <button class="btn btn-secondary btn-sm" id="btn-chat-clear">Clear</button>
+  </div>
+  <div class="chat-disclaimer">⚠️ Powered by Claude AI — responses based on uploaded documents only. Always verify critical information in source documents.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ SCRIPTS ══════════ -->
+
+<!-- A: AppState -->
+<script>
+var AppState = {
+  apiKey: sessionStorage.getItem('gbx_eval_key') || '',
+  model: 'claude-sonnet-4-5',
+  files: [],
+  combinedText: '',
+  tokenEstimate: 0,
+  evaluationResult: null,
+  chatMessages: [],
+  currentStep: 1,
+  evaluatorName: '',
+  radarChart: null,
+  gaugeChart: null
+};
+</script>
+
+<!-- B: Constants & Prompts -->
+<script>
+var TENDER_REF = 'ITT FINHQ0ETT26000001';
+var TENDER_CLOSING = '15 May 2026, 4:00pm';
+var BRIEFING_DATE = '13 April 2026';
+
+var CRITERIA_LABELS = {
+  strategyExecution: '1a. Strategy & Execution Plan',
+  changeManagement:  '1b. Change Management & Onboarding',
+  systemMaintenance: '1c. System Maintenance & Support',
+  serviceDesk:       '1d. Application Service Desk',
+  teamComposition:   '2. Team Composition & Personnel',
+  companyTrackRecord:'3a. Company Track Record',
+  ivaluaCertification:'3b. Ivalua L3 Certification Bench'
+};
+
+var CHECKLIST_LABELS = {
+  formOfTender:'Form of Tender',
+  managementSummary:'Management Summary',
+  prices:'Prices (Excel Format)',
+  statementOfCompliance:'Statement of Compliance',
+  tendererInfo:'Tenderer Information',
+  solutionServices:'Solution & Services',
+  personnelCVs:'Personnel CVs',
+  documentationList:'Documentation List',
+  softwareSupport:'Software Support Plan',
+  trainingPlan:'Training Plan',
+  sitePreparation:'Site Preparation',
+  changeManagement:'Change Management Plan',
+  serviceDesk:'App Service Desk Plan',
+  userReferences:'User References (min 3)',
+  orgSuppliedList:'Org Supplied Items List',
+  progressiveWageDeclaration:'Progressive Wage Declaration',
+  softwareProprietorUndertaking:'Software Proprietor Undertaking',
+  applicableSoftwareList:'Applicable Software List'
+};
+
+var SYSTEM_PROMPT_EVAL = `You are an expert procurement evaluator for the Singapore Ministry of Finance (MOF) evaluating tender ITT FINHQ0ETT26000001 (GeBIZ X — Whole-of-Government Procurement System).
+
+Evaluate the bidder's uploaded submission documents against STAGE 1 and STAGE 2 criteria below.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STAGE 1 — CRITICAL PASS/FAIL (4 checks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[CHECK 1] DEBARMENT STATUS
+The bidder must NOT be debarred by MOF Standing Committee on Debarment.
+Look for: explicit debarment declaration, GeBIZ debarment clearance letter, or statement of no debarment.
+PASS if explicit clearance found. FAIL if on debarment list. UNCERTAIN if no declaration found.
+
+[CHECK 2] GRA REGISTRATION
+Must hold valid GRA registration: code EPU/CMP/10 (Computer Systems & Services) OR EPU/SER/34 (Software Development), minimum grade S10 (above S$30 Million).
+Look for: GRA certificate, registration number, financial grade, expiry date.
+FAIL if: wrong registration code, grade below S10, expired, or no GRA evidence.
+
+[CHECK 3] MANDATORY BRIEFING ATTENDANCE
+Must have attended mandatory tender briefing on 13 April 2026.
+Look for: attendance confirmation, sign-in record, briefing attendance letter.
+FAIL if no evidence. UNCERTAIN if proxy attendance (physical representative required).
+
+[CHECK 4] IVALUA SAAS AS BASE SOLUTION
+Proposed solution MUST use Ivalua SaaS (cloud-hosted, MOF contracts with Ivalua).
+FAIL if: proposing Ivalua on-premise, different procurement platform, or custom-built system.
+UNCERTAIN if mentions Ivalua but SaaS vs on-premise is unclear.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STAGE 2 — PROPOSAL QUALITY (100 pts total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1a] STRATEGY & EXECUTION PLAN (30 pts)
+Assess: clarity of product development roadmap, 27-month timeline with 3 milestones, agile methodology (Scrum/LeSS/SAFe), DORA metrics commitment, integration approach, scalability, co-existence with GeBIZ 2.0, risk management, AI leveraging in delivery.
+Bands: 0-6 poor | 7-15 basic | 16-22 competent | 23-27 good | 28-30 excellent
+
+[1b] CHANGE MANAGEMENT & ONBOARDING (20 pts)
+Assess: stakeholder analysis, training for ~140 agencies & ~120k suppliers, 6-wave onboarding plan, communication strategy, data migration (zero-data-loss), adoption KPIs, pre/post onboarding support.
+Bands: 0-4 poor | 5-9 basic | 10-14 competent | 15-17 good | 18-20 excellent
+
+[1c] SYSTEM MAINTENANCE & SUPPORT (10 pts)
+Assess: SLA commitments (99.9% uptime target), incident response, patch management, problem resolution, multi-vendor coordination, monitoring/reporting dashboard.
+Bands: 0-2 poor | 3-4 basic | 5-6 competent | 7-8 good | 9-10 excellent
+
+[1d] APPLICATION SERVICE DESK (5 pts)
+Assess: helpdesk channels and tools, ticket management, response time SLAs, team structure, knowledge base, reporting.
+Bands: 0-1 poor | 2 basic | 3 competent | 4 good | 5 excellent
+
+[2] TEAM COMPOSITION & KEY PERSONNEL (20 pts)
+Assess: seniority and relevance of team, coverage of key roles (PM, Solution Architect, Change Manager, Ivalua Specialists, ASD Lead), CV quality with verifiable credentials, local Singapore presence, continuity commitment.
+Bands: 0-4 poor | 5-9 basic | 10-14 competent | 15-17 good | 18-20 excellent
+
+[3a] COMPANY TRACK RECORD (5 pts)
+Assess: comparable procurement platform implementations, government sector experience, reference quality, Singapore/SEA geographic relevance, last 5 years.
+Bands: 0-1 poor | 2 basic | 3 competent | 4 good | 5 excellent
+
+[3b] IVALUA L3 CERTIFICATION BENCH (10 pts)
+Assess: number of staff with Ivalua Level 3 certification, recency (within 2 years preferred), coverage across Ivalua modules (Sourcing, Contracts, P2P, Supplier Management).
+Bands: 0-2 poor | 3-4 basic | 5-6 competent | 7-8 good | 9-10 excellent
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Base every score on specific evidence from the documents
+- Missing information should reduce the score accordingly
+- Flag requiresHumanReview:true for borderline scores, contradictions, or high-stakes gaps
+- Extract bidder company name, registration number, contact person, email if present
+
+RESPOND WITH ONLY A VALID JSON OBJECT. No markdown fences. No text before or after.
+
+{"bidder":{"companyName":null,"registrationNumber":null,"contactPerson":null,"email":null},"stage1":{"overallPass":true,"checks":{"debarment":{"result":"UNCERTAIN","evidence":"","documentRef":"","notes":""},"graRegistration":{"result":"UNCERTAIN","registrationCode":null,"grade":null,"expiryDate":null,"evidence":"","documentRef":"","notes":""},"briefingAttendance":{"result":"UNCERTAIN","attendeeNames":[],"evidence":"","documentRef":"","notes":""},"ivaluaSaaS":{"result":"UNCERTAIN","proposedPlatform":null,"evidence":"","documentRef":"","notes":""}},"disqualificationReason":null},"stage2":{"totalScore":0,"criteria":{"strategyExecution":{"maxPoints":30,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"changeManagement":{"maxPoints":20,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"systemMaintenance":{"maxPoints":10,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"serviceDesk":{"maxPoints":5,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"teamComposition":{"maxPoints":20,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"companyTrackRecord":{"maxPoints":5,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]},"ivaluaCertification":{"maxPoints":10,"score":0,"band":"poor","evidence":[],"strengths":[],"gaps":[],"requiresHumanReview":false,"humanReviewReason":null,"clarificationsNeeded":[]}},"overallStrengths":[],"overallConcerns":[],"redFlags":[],"amberFlags":[]}}`;
+
+var SYSTEM_PROMPT_CHECKLIST = `You are a procurement document compliance checker for Singapore MOF tender ITT FINHQ0ETT26000001.
+
+Check whether the bidder's submission includes each of the 18 required sections.
+Status: "PRESENT" (clearly included, substantive content), "PARTIAL" (some content but incomplete), "MISSING" (not found), "UNCERTAIN" (cannot determine).
+
+REQUIRED SECTIONS:
+1. formOfTender — Completed and signed tender form
+2. managementSummary — Executive overview and management summary
+3. prices — Itemized pricing in Excel format (SGD, GST exclusive)
+4. statementOfCompliance — Clause-by-clause compliance matrix (C/NC for all clauses)
+5. tendererInfo — Company background, registration, GRA details, financial standing
+6. solutionServices — Technical and functional solution description, architecture
+7. personnelCVs — CVs for all key personnel in specified format
+8. documentationList — Index of all submitted documents and deliverables
+9. softwareSupport — Post-go-live support and maintenance plan
+10. trainingPlan — Training approach, schedule, trainer qualifications
+11. sitePreparation — Infrastructure, database, storage, memory requirements
+12. changeManagement — Organizational change management plan
+13. serviceDesk — Application service desk setup, team, channels, SLAs
+14. userReferences — Minimum 3 client references with contact details
+15. orgSuppliedList — Items and facilities to be provided by the government
+16. progressiveWageDeclaration — Declaration of compliance with Progressive Wage Model
+17. softwareProprietorUndertaking — Undertaking from Ivalua confirming SaaS availability
+18. applicableSoftwareList — Complete list of all software components
+
+RESPOND WITH ONLY VALID JSON. No markdown. No extra text.
+
+{"checklist":{"totalPresent":0,"totalPartial":0,"totalMissing":0,"totalUncertain":0,"items":{"formOfTender":{"status":"UNCERTAIN","notes":"","documentRef":""},"managementSummary":{"status":"UNCERTAIN","notes":"","documentRef":""},"prices":{"status":"UNCERTAIN","notes":"","documentRef":""},"statementOfCompliance":{"status":"UNCERTAIN","notes":"","documentRef":""},"tendererInfo":{"status":"UNCERTAIN","notes":"","documentRef":""},"solutionServices":{"status":"UNCERTAIN","notes":"","documentRef":""},"personnelCVs":{"status":"UNCERTAIN","countFound":0,"namesFound":[],"notes":"","documentRef":""},"documentationList":{"status":"UNCERTAIN","notes":"","documentRef":""},"softwareSupport":{"status":"UNCERTAIN","notes":"","documentRef":""},"trainingPlan":{"status":"UNCERTAIN","notes":"","documentRef":""},"sitePreparation":{"status":"UNCERTAIN","notes":"","documentRef":""},"changeManagement":{"status":"UNCERTAIN","notes":"","documentRef":""},"serviceDesk":{"status":"UNCERTAIN","notes":"","documentRef":""},"userReferences":{"status":"UNCERTAIN","countFound":0,"companiesFound":[],"notes":"","documentRef":""},"orgSuppliedList":{"status":"UNCERTAIN","notes":"","documentRef":""},"progressiveWageDeclaration":{"status":"UNCERTAIN","notes":"","documentRef":""},"softwareProprietorUndertaking":{"status":"UNCERTAIN","notes":"","documentRef":""},"applicableSoftwareList":{"status":"UNCERTAIN","notes":"","documentRef":""}},"criticalMissing":[],"notes":""}}`;
+</script>
+
+<!-- C: Parsers -->
+<script>
+function fileExt(name){ return (name.split('.').pop()||'').toLowerCase(); }
+function isTextExt(ext){ return ['txt','csv','json','xml','md','html','htm'].indexOf(ext)>-1; }
+
+function truncateText(text,maxChars){
+  maxChars = maxChars||60000;
+  if(text.length>maxChars) return text.slice(0,maxChars)+'\n[... TRUNCATED — content continues beyond extraction limit ...]';
+  return text;
+}
+
+async function parsePDF(arrayBuffer){
+  try{
+    var loadTask = pdfjsLib.getDocument({data:arrayBuffer});
+    var pdf = await loadTask.promise;
+    var pages=[];
+    for(var i=1;i<=pdf.numPages;i++){
+      var page = await pdf.getPage(i);
+      var content = await page.getTextContent();
+      var lineText = content.items.map(function(it){ return it.str; }).join(' ');
+      pages.push(lineText);
+    }
+    return pages.join('\n');
+  }catch(e){ return '[PDF extraction error: '+e.message+']'; }
+}
+
+async function parseDocx(arrayBuffer){
+  try{
+    var result = await mammoth.extractRawText({arrayBuffer:arrayBuffer});
+    return result.value||'[No text extracted from DOCX]';
+  }catch(e){ return '[DOCX extraction error: '+e.message+']'; }
+}
+
+async function parseXlsx(arrayBuffer){
+  try{
+    var wb = XLSX.read(arrayBuffer,{type:'array'});
+    var out=[];
+    wb.SheetNames.forEach(function(name){
+      var ws = wb.Sheets[name];
+      var csv = XLSX.utils.sheet_to_csv(ws,{blankrows:false});
+      // cap at 500 rows
+      var rows = csv.split('\n').slice(0,500).join('\n');
+      out.push('[Sheet: '+name+']\n'+rows);
+    });
+    return out.join('\n\n');
+  }catch(e){ return '[XLSX extraction error: '+e.message+']'; }
+}
+
+async function parsePptx(arrayBuffer){
+  try{
+    var zip = await JSZip.loadAsync(arrayBuffer);
+    var slides=[];
+    var slideFiles = Object.keys(zip.files).filter(function(k){
+      return /ppt\/slides\/slide[0-9]+\.xml$/.test(k) && !zip.files[k].dir;
+    }).sort();
+    for(var i=0;i<slideFiles.length;i++){
+      var xmlText = await zip.files[slideFiles[i]].async('text');
+      var text = xmlText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      slides.push('[Slide '+(i+1)+']: '+text);
+    }
+    var noteFiles = Object.keys(zip.files).filter(function(k){
+      return /ppt\/notesSlides\/notesSlide[0-9]+\.xml$/.test(k) && !zip.files[k].dir;
+    }).sort();
+    for(var j=0;j<noteFiles.length;j++){
+      var nXml = await zip.files[noteFiles[j]].async('text');
+      var nText = nXml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      if(nText.length>20) slides.push('[Notes Slide '+(j+1)+']: '+nText);
+    }
+    return slides.join('\n');
+  }catch(e){ return '[PPTX extraction error: '+e.message+']'; }
+}
+
+async function parseZip(arrayBuffer, parentName, depth){
+  depth = depth||0;
+  if(depth>3) return [];
+  var records=[];
+  try{
+    var zip = await JSZip.loadAsync(arrayBuffer);
+    var entries = Object.keys(zip.files).filter(function(k){ return !zip.files[k].dir; });
+    for(var i=0;i<entries.length;i++){
+      var path = entries[i];
+      var fname = path.split('/').pop();
+      if(!fname||fname.startsWith('.')) continue;
+      var ext = fileExt(fname);
+      try{
+        var rec = {id:Date.now()+'_'+Math.random(),name:fname,fullPath:path,fromZip:parentName,extractionStatus:'processing',extractedText:'',sizeBytes:0};
+        if(ext==='zip'){
+          var subBuf = await zip.files[path].async('arraybuffer');
+          rec.sizeBytes = subBuf.byteLength;
+          var subRecs = await parseZip(subBuf,fname,depth+1);
+          records = records.concat(subRecs);
+          continue;
+        } else if(isTextExt(ext)){
+          var textContent = await zip.files[path].async('text');
+          rec.extractedText = truncateText(textContent);
+          rec.sizeBytes = textContent.length;
+        } else {
+          var binBuf = await zip.files[path].async('arraybuffer');
+          rec.sizeBytes = binBuf.byteLength;
+          if(ext==='pdf') rec.extractedText = truncateText(await parsePDF(binBuf));
+          else if(ext==='docx') rec.extractedText = truncateText(await parseDocx(binBuf));
+          else if(ext==='xlsx'||ext==='xls') rec.extractedText = truncateText(await parseXlsx(binBuf));
+          else if(ext==='pptx') rec.extractedText = truncateText(await parsePptx(binBuf));
+          else rec.extractedText='[Binary file: '+fname+' — not text extractable]';
+        }
+        rec.extractionStatus = rec.extractedText.startsWith('[')&&rec.extractedText.includes('error') ? 'error' : 'done';
+        records.push(rec);
+      }catch(fileErr){
+        records.push({id:Date.now()+'_'+i,name:fname,fullPath:path,fromZip:parentName,extractionStatus:'error',extractedText:'[Error processing: '+fileErr.message+']',sizeBytes:0});
+      }
+    }
+  }catch(e){ /* zip parse error */ }
+  return records;
+}
+
+async function parseFile(file){
+  var ext = fileExt(file.name);
+  var rec = {id:Date.now()+'_'+Math.random(),name:file.name,sizeBytes:file.size,fromZip:null,extractionStatus:'processing',extractedText:'',isParentZip:false,children:[]};
+  try{
+    if(ext==='zip'){
+      rec.isParentZip=true;
+      rec.extractionStatus='processing';
+      var buf = await file.arrayBuffer();
+      var children = await parseZip(buf,file.name,0);
+      rec.children = children;
+      rec.extractedText='[ZIP container — '+children.length+' files extracted]';
+      rec.extractionStatus='done';
+    } else if(isTextExt(ext)){
+      var txt = await file.text();
+      rec.extractedText = truncateText(txt);
+      rec.extractionStatus='done';
+    } else {
+      var buf2 = await file.arrayBuffer();
+      if(ext==='pdf') rec.extractedText = truncateText(await parsePDF(buf2));
+      else if(ext==='docx') rec.extractedText = truncateText(await parseDocx(buf2));
+      else if(ext==='xlsx'||ext==='xls') rec.extractedText = truncateText(await parseXlsx(buf2));
+      else if(ext==='pptx') rec.extractedText = truncateText(await parsePptx(buf2));
+      else if(['jpg','jpeg','png','gif','bmp'].indexOf(ext)>-1) rec.extractedText='[IMAGE: '+file.name+' — visual content not text-extractable. Note its presence in evaluation.]';
+      else rec.extractedText='[Unsupported format: '+file.name+']';
+      rec.extractionStatus = (rec.extractedText.includes('extraction error')) ? 'partial' : 'done';
+    }
+  }catch(e){
+    rec.extractedText='[Error: '+e.message+']';
+    rec.extractionStatus='error';
+  }
+  return rec;
+}
+
+function buildCorpus(){
+  var parts=[];
+  AppState.files.forEach(function(f){
+    if(f.isParentZip){
+      f.children.forEach(function(c){
+        if(c.extractedText) parts.push('[FILE: '+c.name+' (from '+f.name+')]\n'+c.extractedText);
+      });
+    } else {
+      if(f.extractedText) parts.push('[FILE: '+f.name+']\n'+f.extractedText);
+    }
+  });
+  return parts.join('\n\n---\n\n');
+}
+
+function estimateTokens(text){ return Math.ceil(text.length/4); }
+function estimateCost(tokens){ return (tokens*3/1000000 + 12000*15/1000000).toFixed(2); }
+</script>
+
+<!-- D: Claude API -->
+<script>
+async function callClaude(systemPrompt, userMessage, maxTokens){
+  maxTokens = maxTokens||8000;
+  var resp = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'x-api-key': AppState.apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+      'content-type':'application/json'
+    },
+    body: JSON.stringify({
+      model: AppState.model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages:[{role:'user',content:userMessage}]
+    })
+  });
+  if(!resp.ok){
+    var err = await resp.json().catch(function(){ return {}; });
+    throw new Error((err.error && err.error.message)||('API error '+resp.status));
+  }
+  var data = await resp.json();
+  return data.content[0].text;
+}
+
+async function callClaudeStream(messages, systemPrompt, onChunk, onDone){
+  var resp = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'x-api-key': AppState.apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+      'content-type':'application/json'
+    },
+    body: JSON.stringify({
+      model: AppState.model,
+      max_tokens: 2000,
+      stream: true,
+      system: systemPrompt,
+      messages: messages
+    })
+  });
+  if(!resp.ok){
+    var err2 = await resp.json().catch(function(){ return {}; });
+    throw new Error((err2.error && err2.error.message)||('API error '+resp.status));
+  }
+  var reader = resp.body.getReader();
+  var decoder = new TextDecoder();
+  while(true){
+    var read = await reader.read();
+    if(read.done) break;
+    var chunk = decoder.decode(read.value);
+    var lines = chunk.split('\n');
+    for(var i=0;i<lines.length;i++){
+      var line = lines[i];
+      if(line.startsWith('data: ')&&line!=='data: [DONE]'){
+        try{
+          var parsed = JSON.parse(line.slice(6));
+          if(parsed.type==='content_block_delta'&&parsed.delta&&parsed.delta.text){
+            onChunk(parsed.delta.text);
+          }
+        }catch(e){}
+      }
+    }
+  }
+  onDone();
+}
+
+function parseJSONFromResponse(text){
+  var s = text.replace(/^```(?:json)?\s*/m,'').replace(/\s*```\s*$/m,'');
+  var start = s.indexOf('{'), end = s.lastIndexOf('}');
+  if(start===-1||end===-1) throw new Error('No JSON object found in Claude response');
+  s = s.slice(start,end+1);
+  try{ return JSON.parse(s); }
+  catch(e1){
+    s = s.replace(/,(\s*[}\]])/g,'$1');
+    try{ return JSON.parse(s); }
+    catch(e2){ throw new Error('JSON parse failed: '+e2.message+'\nRaw: '+s.slice(0,200)); }
+  }
+}
+
+async function testAPIConnection(){
+  var el = document.getElementById('api-test-result');
+  el.textContent='Testing…';
+  try{
+    var r = await callClaude('You are a test assistant.','Reply with exactly: {"ok":true}',100);
+    el.textContent='✅ Connected — API key valid';
+    el.style.color='var(--green)';
+  }catch(e){
+    el.textContent='❌ '+e.message;
+    el.style.color='var(--red)';
+  }
+}
+</script>
+
+<!-- E: Evaluation Engine -->
+<script>
+function logStatus(msg,type){
+  var log = document.getElementById('status-log');
+  var cls = type==='ok'?'log-ok':type==='warn'?'log-warn':type==='err'?'log-err':'';
+  var div = document.createElement('div');
+  div.className='log-line'+(cls?' '+cls:'');
+  div.textContent=msg;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+}
+
+async function summarizeChunks(corpus){
+  var CHUNK_SIZE = 500000;
+  var chunks=[];
+  for(var i=0;i<corpus.length;i+=CHUNK_SIZE) chunks.push(corpus.slice(i,i+CHUNK_SIZE));
+  logStatus('⚠️ Submission is large ('+chunks.length+' chunks). Summarising before evaluation…','warn');
+  var summaries=[];
+  for(var j=0;j<chunks.length;j++){
+    logStatus('  Summarising chunk '+(j+1)+'/'+chunks.length+'…');
+    var sumSys='Extract key facts, requirements, company information, and important details from this tender submission excerpt. Be concise but comprehensive. Focus on: company name, GRA registration, Ivalua SaaS confirmation, team members, certifications, experience, proposal approach, pricing, and compliance items.';
+    var sumUser='EXCERPT '+(j+1)+'/'+chunks.length+':\n'+chunks[j];
+    var sum = await callClaude(sumSys,sumUser,3000);
+    summaries.push('[SUMMARY OF CHUNK '+(j+1)+']:\n'+sum);
+  }
+  return summaries.join('\n\n---\n\n');
+}
+
+function mergeResults(r1,r2){
+  var stage1 = r1.stage1||{};
+  var stage2 = r1.stage2||{};
+  var bidder = r1.bidder||{};
+  var checklist = r2.checklist||{};
+  var criteria = stage2.criteria||{};
+
+  // Overall status
+  var s1Pass = stage1.overallPass===true;
+  var s2Score = stage2.totalScore||0;
+  var overallStatus = !s1Pass ? 'DISQUALIFIED' : (s2Score<60 ? 'CONDITIONAL PASS' : 'PASS');
+  var statusReason = !s1Pass ? (stage1.disqualificationReason||'Failed one or more Stage 1 criteria')
+    : s2Score<60 ? 'Passed Stage 1 but Stage 2 score is below 60/100'
+    : 'Passed Stage 1 and Stage 2 quality threshold';
+
+  // Consolidate flags
+  var humanFlags=[], attentionFlags=[], clarifyFlags=[];
+
+  // Red flags from stage 2
+  (stage2.redFlags||[]).forEach(function(f){
+    humanFlags.push({severity:'red',criterion:'Stage 2',description:f,documentRef:''});
+  });
+  // Amber flags
+  (stage2.amberFlags||[]).forEach(function(f){
+    attentionFlags.push({severity:'amber',criterion:'Stage 2',description:f,documentRef:''});
+  });
+  // Human review flags from criteria
+  Object.keys(criteria).forEach(function(k){
+    var c = criteria[k];
+    if(c.requiresHumanReview){
+      humanFlags.push({severity:'red',criterion:CRITERIA_LABELS[k]||k,description:c.humanReviewReason||'Requires human review',documentRef:''});
+    }
+    (c.clarificationsNeeded||[]).forEach(function(q){
+      clarifyFlags.push({severity:'info',criterion:CRITERIA_LABELS[k]||k,description:q,documentRef:''});
+    });
+    (c.gaps||[]).forEach(function(g){
+      if(g.length>10) attentionFlags.push({severity:'amber',criterion:CRITERIA_LABELS[k]||k,description:g,documentRef:''});
+    });
+  });
+  // Stage 1 uncertain = human flag
+  var s1Checks = stage1.checks||{};
+  Object.keys(s1Checks).forEach(function(k){
+    if(s1Checks[k].result==='UNCERTAIN'){
+      humanFlags.push({severity:'red',criterion:'Stage 1 — '+k,description:'Result is UNCERTAIN — manual verification required. '+s1Checks[k].notes,documentRef:s1Checks[k].documentRef||''});
+    }
+    if(s1Checks[k].result==='FAIL'){
+      humanFlags.push({severity:'red',criterion:'Stage 1 — '+k+' [FAIL]',description:'Critical failure: '+s1Checks[k].notes,documentRef:s1Checks[k].documentRef||''});
+    }
+  });
+  // Missing checklist items
+  (checklist.criticalMissing||[]).forEach(function(m){
+    humanFlags.push({severity:'red',criterion:'Submission Checklist',description:'Critical missing item: '+m,documentRef:''});
+  });
+
+  return {
+    meta:{
+      tenderRef:TENDER_REF,
+      evaluatedAt:new Date().toISOString(),
+      model:AppState.model,
+      filesEvaluated:AppState.files.map(function(f){return f.name;}),
+      tokenEstimate:AppState.tokenEstimate,
+      evaluatorName:AppState.evaluatorName,
+      disclaimer:'AI-Assisted Pre-Evaluation. For internal use only. Must be validated by authorised evaluators.'
+    },
+    overall:{status:overallStatus,statusReason:statusReason,stage2Score:s2Score,stage2Weighted:+(s2Score*0.3).toFixed(1)},
+    bidder:bidder,
+    stage1:stage1,
+    stage2:stage2,
+    checklist:checklist,
+    flags:{humanInterventionRequired:humanFlags,attentionRequired:attentionFlags,clarificationsNeeded:clarifyFlags}
+  };
+}
+
+async function runEvaluation(){
+  var btn = document.getElementById('btn-run-eval');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Evaluating…';
+  document.getElementById('status-log').innerHTML='';
+
+  try{
+    // Build corpus
+    logStatus('⏳ Building text corpus from uploaded files…');
+    var corpus = buildCorpus();
+    var estimate = estimateTokens(corpus);
+    AppState.tokenEstimate = estimate;
+    AppState.combinedText = corpus;
+
+    logStatus('📄 Corpus ready — '+AppState.files.length+' files, ~'+estimate.toLocaleString()+' tokens');
+
+    var evalCorpus = corpus;
+    if(estimate > 800000){
+      evalCorpus = await summarizeChunks(corpus);
+      logStatus('✅ Summarisation complete','ok');
+    }
+
+    var userMsg = 'Below is the full extracted text from the bidder\'s tender submission for '+TENDER_REF+'. Evaluate as instructed.\n\n===BEGIN DOCUMENTS===\n'+evalCorpus+'\n===END DOCUMENTS===';
+
+    // Call 1: Stage 1 + Stage 2
+    logStatus('📡 Calling Claude API — Stage 1 & Stage 2 evaluation (this may take 30-60s)…');
+    var raw1 = await callClaude(SYSTEM_PROMPT_EVAL, userMsg, 8000);
+    logStatus('✅ Stage 1 & Stage 2 response received','ok');
+
+    var result1;
+    try{ result1 = parseJSONFromResponse(raw1); }
+    catch(pe){
+      logStatus('⚠️ JSON parse issue on Stage 1+2 response. Retrying…','warn');
+      // Show raw in log
+      logStatus('Raw: '+raw1.slice(0,300));
+      throw new Error('Could not parse Stage 1+2 response: '+pe.message);
+    }
+
+    // Call 2: Checklist
+    logStatus('📡 Calling Claude API — Submission checklist analysis…');
+    var raw2 = await callClaude(SYSTEM_PROMPT_CHECKLIST, userMsg, 4000);
+    logStatus('✅ Checklist response received','ok');
+
+    var result2;
+    try{ result2 = parseJSONFromResponse(raw2); }
+    catch(pe2){
+      logStatus('⚠️ JSON parse issue on checklist response','warn');
+      result2 = {checklist:{totalPresent:0,totalPartial:0,totalMissing:0,totalUncertain:18,items:{},criticalMissing:[],notes:'Parse error — '+pe2.message}};
+    }
+
+    // Merge
+    logStatus('🔀 Merging results…');
+    var merged = mergeResults(result1, result2);
+    AppState.evaluationResult = merged;
+
+    logStatus('🎨 Rendering results dashboard…');
+    renderResults(merged);
+
+    logStatus('✅ Evaluation complete!','ok');
+
+    showStep(4);
+    document.getElementById('chat-toggle').style.display='block';
+
+  }catch(err){
+    logStatus('❌ Evaluation failed: '+err.message,'err');
+    btn.disabled=false;
+    btn.innerHTML='🔍 Retry Evaluation';
+  }
+}
+</script>
+
+<!-- F: Results Renderer -->
+<script>
+function esc(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderResults(r){
+  // Report bar
+  document.getElementById('rpt-evaluator').textContent = r.meta.evaluatorName||'—';
+  document.getElementById('rpt-bidder').textContent = (r.bidder&&r.bidder.companyName)||'Unknown Bidder';
+  document.getElementById('rpt-date').textContent = new Date(r.meta.evaluatedAt).toLocaleString('en-SG');
+  document.getElementById('rpt-bidder-full').textContent = (r.bidder&&r.bidder.companyName)||'Bidder Evaluation';
+  document.getElementById('r-files').textContent = r.meta.filesEvaluated.length;
+  document.getElementById('r-model').textContent = r.meta.model;
+  document.getElementById('r-tokens').textContent = (r.meta.tokenEstimate||0).toLocaleString();
+
+  // Overall badge
+  var badgeEl = document.getElementById('r-overall-badge');
+  var cls = r.overall.status==='PASS'?'badge-green':r.overall.status==='DISQUALIFIED'?'badge-red':'badge-amber';
+  badgeEl.className='badge badge-xl '+cls;
+  badgeEl.textContent=r.overall.status;
+  document.getElementById('r-s2-score').textContent = r.overall.stage2Score;
+  document.getElementById('r-s2-weighted').textContent = r.overall.stage2Weighted+' pts';
+  document.getElementById('r-s2-total').textContent = r.overall.stage2Score;
+
+  renderStage1(r.stage1);
+  renderStage2(r.stage2);
+  renderChecklist(r.checklist);
+  renderFlags(r.flags);
+  renderStrengths(r.stage2);
+  renderCharts(r.stage2);
+}
+
+function renderStage1(s1){
+  var badge = document.getElementById('r-s1-badge');
+  badge.className='badge '+(s1.overallPass?'badge-green':'badge-red');
+  badge.textContent=s1.overallPass?'ALL PASS':'FAILED';
+  var checks = s1.checks||{};
+  var checkDefs=[
+    {key:'debarment',title:'Debarment Status',icon:'🏛️'},
+    {key:'graRegistration',title:'GRA Registration',icon:'📋'},
+    {key:'briefingAttendance',title:'Mandatory Briefing',icon:'👥'},
+    {key:'ivaluaSaaS',title:'Ivalua SaaS Platform',icon:'☁️'}
+  ];
+  var html='';
+  checkDefs.forEach(function(def){
+    var c = checks[def.key]||{result:'UNCERTAIN',evidence:'',notes:''};
+    var cardCls = c.result==='PASS'?'pass':c.result==='FAIL'?'fail':'uncertain';
+    var badgeCls = c.result==='PASS'?'badge-green':c.result==='FAIL'?'badge-red':'badge-amber';
+    var extra='';
+    if(def.key==='graRegistration'&&c.registrationCode) extra='<div style="font-size:12px;margin-top:4px"><strong>Code:</strong> '+esc(c.registrationCode)+' &nbsp; <strong>Grade:</strong> '+esc(c.grade)+(c.expiryDate?' &nbsp; <strong>Expiry:</strong> '+esc(c.expiryDate):'')+'</div>';
+    if(def.key==='briefingAttendance'&&c.attendeeNames&&c.attendeeNames.length) extra='<div style="font-size:12px;margin-top:4px"><strong>Attendees:</strong> '+esc(c.attendeeNames.join(', '))+'</div>';
+    if(def.key==='ivaluaSaaS'&&c.proposedPlatform) extra='<div style="font-size:12px;margin-top:4px"><strong>Proposed:</strong> '+esc(c.proposedPlatform)+'</div>';
+    html+='<div class="s1-card '+cardCls+'">'
+      +'<div class="s1-card-title">'+def.icon+' '+esc(def.title)+' <span class="badge '+badgeCls+'">'+esc(c.result)+'</span></div>'
+      +extra
+      +(c.evidence?'<div class="s1-card-evidence">'+esc(c.evidence.slice(0,200))+'</div>':'')
+      +(c.notes?'<div class="s1-card-evidence" style="color:var(--amber-d);margin-top:4px">⚠️ '+esc(c.notes)+'</div>':'')
+      +'</div>';
+  });
+  document.getElementById('panel-stage1').innerHTML=html;
+  if(!s1.overallPass&&s1.disqualificationReason){
+    var dEl=document.getElementById('r-s1-disq');
+    dEl.style.display='flex';
+    dEl.style.background='var(--red-l)';
+    dEl.style.borderColor='#fecaca';
+    dEl.style.color='#b91c1c';
+    dEl.textContent='⛔ '+s1.disqualificationReason;
+  }
+}
+
+function renderStage2(s2){
+  var criteria = s2.criteria||{};
+  var order=['strategyExecution','changeManagement','systemMaintenance','serviceDesk','teamComposition','companyTrackRecord','ivaluaCertification'];
+  var html='';
+  order.forEach(function(k){
+    var c = criteria[k]||{maxPoints:0,score:0,band:'poor',evidence:[],strengths:[],gaps:[],clarificationsNeeded:[]};
+    var pct = c.maxPoints>0?Math.round(c.score/c.maxPoints*100):0;
+    var bandCls = {excellent:'badge-green',good:'badge-navy',competent:'badge-blue',basic:'badge-amber',poor:'badge-red'}[c.band]||'badge-grey';
+    var hrIcon = c.requiresHumanReview?'<span title="Human review required" style="cursor:help">🔴</span>':'';
+    html+='<div class="s2-criterion">'
+      +'<div class="s2-header" onclick="toggleS2(this)">'
+      +hrIcon+'<div class="s2-title">'+esc(CRITERIA_LABELS[k]||k)+'</div>'
+      +'<span class="badge '+bandCls+'">'+esc(c.band)+'</span>'
+      +'<div class="s2-bar-wrap"><div class="s2-bar" style="width:'+pct+'%"></div></div>'
+      +'<div class="s2-score">'+c.score+'<span>/'+c.maxPoints+'</span></div>'
+      +'<span class="chevron">▼</span>'
+      +'</div>'
+      +'<div class="s2-body">';
+    if(c.evidence&&c.evidence.length){
+      html+='<div class="s2-section"><div class="s2-section-title">Evidence Found</div><div>';
+      c.evidence.forEach(function(e){ if(e) html+='<div style="font-size:12px;color:var(--g700);margin-bottom:4px;padding:4px 0;border-bottom:1px solid var(--g100)">• '+esc(e)+'</div>'; });
+      html+='</div></div>';
+    }
+    if(c.strengths&&c.strengths.length){
+      html+='<div class="s2-section"><div class="s2-section-title">Strengths</div><div class="s2-pills">';
+      c.strengths.forEach(function(s){ html+='<span class="pill pill-green">'+esc(s)+'</span>'; });
+      html+='</div></div>';
+    }
+    if(c.gaps&&c.gaps.length){
+      html+='<div class="s2-section"><div class="s2-section-title">Gaps / Weaknesses</div><div class="s2-pills">';
+      c.gaps.forEach(function(g){ html+='<span class="pill pill-red">'+esc(g)+'</span>'; });
+      html+='</div></div>';
+    }
+    if(c.clarificationsNeeded&&c.clarificationsNeeded.length){
+      html+='<div class="s2-section"><div class="s2-section-title">Clarifications Needed from Bidder</div><div class="s2-pills">';
+      c.clarificationsNeeded.forEach(function(q){ html+='<span class="pill pill-blue">'+esc(q)+'</span>'; });
+      html+='</div></div>';
+    }
+    if(c.requiresHumanReview){
+      html+='<div style="background:var(--red-l);border-radius:6px;padding:8px 12px;font-size:12px;color:#b91c1c;margin-top:4px">🔴 <strong>Human Review Required:</strong> '+esc(c.humanReviewReason||'Requires manual review by authorised evaluator')+'</div>';
+    }
+    html+='</div></div>';
+  });
+  document.getElementById('panel-stage2').innerHTML=html;
+}
+
+function toggleS2(header){
+  var body = header.nextElementSibling;
+  var chevron = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function renderChecklist(cl){
+  var items = cl.items||{};
+  var present=0,partial=0,missing=0,uncertain=0;
+  Object.keys(items).forEach(function(k){
+    var s=(items[k].status||'').toUpperCase();
+    if(s==='PRESENT')present++;else if(s==='PARTIAL')partial++;else if(s==='MISSING')missing++;else uncertain++;
+  });
+  var total=present+partial+missing+uncertain;
+  var badgeCls = missing>0?'badge-red':partial>0?'badge-amber':'badge-green';
+  document.getElementById('r-cl-summary').className='badge '+badgeCls;
+  document.getElementById('r-cl-summary').textContent=present+'/18 Present';
+
+  if(cl.criticalMissing&&cl.criticalMissing.length){
+    var critEl=document.getElementById('cl-critical');
+    critEl.style.display='block';
+    critEl.innerHTML='<div class="token-info" style="background:var(--red-l);border-color:#fecaca;color:#b91c1c;gap:8px">⛔ <strong>Critical Missing Items:</strong> '+esc(cl.criticalMissing.join(', '))+'</div>';
+  }
+
+  var order=Object.keys(CHECKLIST_LABELS);
+  var num=1;
+  var html='';
+  order.forEach(function(k){
+    var item = items[k]||{status:'UNCERTAIN',notes:'',documentRef:''};
+    var s=(item.status||'UNCERTAIN').toLowerCase();
+    var badgeCls2=s==='present'?'badge-green':s==='partial'?'badge-amber':s==='missing'?'badge-red':'badge-grey';
+    html+='<div class="cl-item '+s+'">'
+      +'<span class="cl-num">'+num+'.</span>'
+      +'<div>'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+      +'<span class="cl-name">'+esc(CHECKLIST_LABELS[k]||k)+'</span>'
+      +'<span class="badge '+badgeCls2+'">'+esc(item.status||'UNCERTAIN')+'</span>'
+      +'</div>'
+      +(item.notes?'<div class="cl-notes">'+esc(item.notes)+'</div>':'')
+      +(item.documentRef?'<div class="cl-notes" style="font-style:italic">📄 '+esc(item.documentRef)+'</div>':'')
+      +'</div>'
+      +'</div>';
+    num++;
+  });
+  document.getElementById('panel-checklist').innerHTML=html;
+}
+
+function renderFlags(flags){
+  function buildCol(title,cls,items,emptyMsg){
+    var h='<div class="flag-col"><div class="flag-col-header '+cls+'">'+title+' ('+items.length+')</div>';
+    if(!items.length) h+='<div class="flag-empty">'+emptyMsg+'</div>';
+    items.forEach(function(f){
+      h+='<div class="flag-item"><div class="flag-crit">'+esc(f.criterion)+'</div><div class="flag-desc">'+esc(f.description)+'</div>'+(f.documentRef?'<div class="flag-ref">📄 '+esc(f.documentRef)+'</div>':'')+'</div>';
+    });
+    h+='</div>';
+    return h;
+  }
+  var html=buildCol('🔴 Human Intervention Required','red',flags.humanInterventionRequired||[],'✅ No critical issues identified')
+    +buildCol('🟡 Attention Required','amber',flags.attentionRequired||[],'✅ No attention items')
+    +buildCol('🔵 Clarifications Needed','blue',flags.clarificationsNeeded||[],'✅ No clarifications needed');
+  document.getElementById('panel-flags').innerHTML=html;
+}
+
+function renderStrengths(s2){
+  var strengths=(s2&&s2.overallStrengths)||[];
+  if(!strengths.length){
+    document.getElementById('panel-strengths').innerHTML='<span style="color:var(--g500);font-size:13px">No specific strengths identified from document analysis.</span>';
+    return;
+  }
+  var html='';
+  strengths.forEach(function(s){ html+='<div class="strength-pill">✅ '+esc(s)+'</div>'; });
+  document.getElementById('panel-strengths').innerHTML=html;
+}
+
+function renderCharts(s2){
+  var criteria = s2.criteria||{};
+  var order=['strategyExecution','changeManagement','systemMaintenance','serviceDesk','teamComposition','companyTrackRecord','ivaluaCertification'];
+  var labels=['Strategy\n& Exec','Change\nMgmt','Sys\nMaint','Service\nDesk','Team','Track\nRecord','Ivalua\nCerts'];
+  var data=order.map(function(k){
+    var c=criteria[k]||{score:0,maxPoints:1};
+    return c.maxPoints>0?Math.round(c.score/c.maxPoints*100):0;
+  });
+
+  if(AppState.radarChart) AppState.radarChart.destroy();
+  if(AppState.gaugeChart) AppState.gaugeChart.destroy();
+
+  var radarCtx=document.getElementById('chart-radar').getContext('2d');
+  AppState.radarChart=new Chart(radarCtx,{
+    type:'radar',
+    data:{
+      labels:['Strategy & Exec','Change Mgmt','Sys Maint','Service Desk','Team','Track Record','Ivalua Certs'],
+      datasets:[{label:'Score %',data:data,backgroundColor:'rgba(26,58,92,0.15)',borderColor:'#1a3a5c',pointBackgroundColor:'#1a3a5c',pointRadius:5,borderWidth:2}]
+    },
+    options:{responsive:true,scales:{r:{beginAtZero:true,max:100,ticks:{stepSize:20,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{display:false}}}
+  });
+
+  var gaugeCtx=document.getElementById('chart-gauge').getContext('2d');
+  var score=s2.totalScore||0;
+  var scoreColor=score>=80?'#16a34a':score>=60?'#2563eb':score>=40?'#f59e0b':'#dc2626';
+  AppState.gaugeChart=new Chart(gaugeCtx,{
+    type:'doughnut',
+    data:{datasets:[{data:[score,100-score],backgroundColor:[scoreColor,'#e5e7eb'],borderWidth:0,hoverOffset:0}]},
+    options:{circumference:180,rotation:-90,cutout:'72%',responsive:true,animation:{animateRotate:true},plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+  document.getElementById('gauge-label').textContent=score;
+  document.getElementById('gauge-label').style.color=scoreColor;
+}
+</script>
+
+<!-- G: Reports -->
+<script>
+function safeStr(v){ return v!=null?String(v):''; }
+
+function downloadPDF(result){
+  try{
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pw=doc.internal.pageSize.getWidth(), ph=doc.internal.pageSize.getHeight();
+    var margin=15, cy=margin;
+
+    function footer(){
+      var pg=doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(8);doc.setTextColor(150);
+      doc.text('CONFIDENTIAL — AI-Assisted Evaluation | '+TENDER_REF+' | For Internal Use Only | Page '+pg, margin, ph-8);
+      doc.setTextColor(0);
+    }
+    function heading(text,size,color){
+      size=size||12; color=color||[26,58,92];
+      doc.setFontSize(size);doc.setTextColor(color[0],color[1],color[2]);
+      doc.setFont(undefined,'bold');
+      doc.text(text,margin,cy);
+      doc.setFont(undefined,'normal');
+      cy+=size*0.6;
+    }
+    function body(text,size){
+      size=size||9; doc.setFontSize(size);doc.setTextColor(60,60,60);
+      var lines=doc.splitTextToSize(text,pw-margin*2);
+      doc.text(lines,margin,cy); cy+=lines.length*(size*0.45)+2;
+    }
+    function addPage(){footer();doc.addPage();cy=margin+5;}
+    function space(n){cy+=n||4;}
+
+    // ── PAGE 1: Cover ──
+    doc.setFillColor(26,58,92);doc.rect(0,0,pw,40,'F');
+    doc.setFontSize(20);doc.setTextColor(255,255,255);doc.setFont(undefined,'bold');
+    doc.text('GBX Tender Evaluation Report',margin,20);
+    doc.setFontSize(11);doc.setFont(undefined,'normal');
+    doc.text('Ministry of Finance, Singapore | '+TENDER_REF,margin,30);
+    doc.setTextColor(0);cy=55;
+
+    heading('EVALUATION OVERVIEW',14);space(2);
+    var bidName=(result.bidder&&result.bidder.companyName)||'Unknown Bidder';
+    var rows=[
+      ['Tender Reference',TENDER_REF],
+      ['Tender Closing Date',TENDER_CLOSING],
+      ['Bidder',bidName],
+      ['Registration No.',(result.bidder&&result.bidder.registrationNumber)||'—'],
+      ['Contact Person',(result.bidder&&result.bidder.contactPerson)||'—'],
+      ['Contact Email',(result.bidder&&result.bidder.email)||'—'],
+      ['Evaluated By',result.meta.evaluatorName||'—'],
+      ['Evaluation Date',new Date(result.meta.evaluatedAt).toLocaleString('en-SG')],
+      ['AI Model Used',result.meta.model],
+      ['Files Evaluated',result.meta.filesEvaluated.join(', ')],
+      ['Overall Status',result.overall.status],
+      ['Stage 2 Score',result.overall.stage2Score+'/100'],
+    ];
+    doc.autoTable({startY:cy,head:[['Field','Value']],body:rows,margin:{left:margin,right:margin},styles:{fontSize:9},headStyles:{fillColor:[26,58,92]},columnStyles:{0:{cellWidth:55,fontStyle:'bold'}},theme:'striped'});
+    cy=doc.lastAutoTable.finalY+8;
+    body('⚠️ DISCLAIMER: '+result.meta.disclaimer);
+    footer();
+
+    // ── PAGE 2: Stage 1 ──
+    addPage();
+    heading('Stage 1 — Critical Pass/Fail Criteria',14);
+    var s1=result.stage1||{};
+    var checks=s1.checks||{};
+    var s1rows=[
+      ['Debarment Status',safeStr((checks.debarment||{}).result),(checks.debarment||{}).evidence||'',(checks.debarment||{}).notes||''],
+      ['GRA Registration',safeStr((checks.graRegistration||{}).result),'Code: '+safeStr((checks.graRegistration||{}).registrationCode)+' Grade: '+safeStr((checks.graRegistration||{}).grade),(checks.graRegistration||{}).notes||''],
+      ['Mandatory Briefing',safeStr((checks.briefingAttendance||{}).result),(checks.briefingAttendance||{}).evidence||'',(checks.briefingAttendance||{}).notes||''],
+      ['Ivalua SaaS',safeStr((checks.ivaluaSaaS||{}).result),(checks.ivaluaSaaS||{}).evidence||'',(checks.ivaluaSaaS||{}).notes||''],
+    ];
+    doc.autoTable({startY:cy,head:[['Check','Result','Evidence','Notes']],body:s1rows,margin:{left:margin,right:margin},styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[26,58,92]},columnStyles:{1:{cellWidth:18},0:{cellWidth:35}},theme:'striped'});
+    cy=doc.lastAutoTable.finalY+8;
+    if(s1.disqualificationReason){ doc.setTextColor(180,0,0);body('⛔ DISQUALIFICATION REASON: '+s1.disqualificationReason);doc.setTextColor(0); }
+    footer();
+
+    // ── PAGE 3: Stage 2 ──
+    addPage();
+    heading('Stage 2 — Proposal Quality Score: '+result.overall.stage2Score+'/100',14);
+    var criteria=result.stage2.criteria||{};
+    var s2rows=Object.keys(CRITERIA_LABELS).map(function(k){
+      var c=criteria[k]||{score:0,maxPoints:0,band:'—'};
+      return [CRITERIA_LABELS[k],c.score+'/'+c.maxPoints,c.band.toUpperCase(),(c.strengths||[]).slice(0,2).join('; '),(c.gaps||[]).slice(0,2).join('; ')];
+    });
+    doc.autoTable({startY:cy,head:[['Criterion','Score','Band','Strengths (top 2)','Gaps (top 2)']],body:s2rows,margin:{left:margin,right:margin},styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[26,58,92]},columnStyles:{1:{cellWidth:18},2:{cellWidth:22}},theme:'striped'});
+    cy=doc.lastAutoTable.finalY+8;
+    if(result.stage2.overallConcerns&&result.stage2.overallConcerns.length){
+      heading('Overall Concerns',11);
+      result.stage2.overallConcerns.forEach(function(c){ if(cy>ph-30)addPage(); body('• '+c); });
+    }
+    footer();
+
+    // ── PAGE 4: Checklist ──
+    addPage();
+    heading('Submission Completeness Checklist',14);
+    var cl=result.checklist||{};
+    body('Present: '+(cl.totalPresent||0)+' | Partial: '+(cl.totalPartial||0)+' | Missing: '+(cl.totalMissing||0)+' | Uncertain: '+(cl.totalUncertain||0));
+    space(4);
+    var clItems=cl.items||{};
+    var clRows=Object.keys(CHECKLIST_LABELS).map(function(k,i){
+      var item=clItems[k]||{status:'UNCERTAIN',notes:''};
+      return [(i+1)+'. '+CHECKLIST_LABELS[k],item.status,item.notes||item.documentRef||''];
+    });
+    doc.autoTable({startY:cy,head:[['Submission Section','Status','Notes']],body:clRows,margin:{left:margin,right:margin},styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[26,58,92]},columnStyles:{1:{cellWidth:22}},theme:'striped',didParseCell:function(data){if(data.section==='body'&&data.column.index===1){var v=data.cell.raw;if(v==='MISSING')data.cell.styles.textColor=[180,0,0];else if(v==='PRESENT')data.cell.styles.textColor=[22,163,74];else if(v==='PARTIAL')data.cell.styles.textColor=[180,100,0];}}});
+    footer();
+
+    // ── PAGE 5: Flags ──
+    addPage();
+    heading('Evaluation Flags Summary',14);
+    var flags=result.flags||{};
+    function flagTable(title,items){
+      if(!items||!items.length) return;
+      if(cy>ph-50) addPage();
+      heading(title,11);
+      var frows=items.map(function(f){return [f.criterion,f.description,f.documentRef||''];});
+      doc.autoTable({startY:cy,head:[['Criterion','Description','Document Ref']],body:frows,margin:{left:margin,right:margin},styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[100,100,100]},theme:'striped'});
+      cy=doc.lastAutoTable.finalY+6;
+    }
+    flagTable('🔴 Human Intervention Required',flags.humanInterventionRequired);
+    flagTable('🟡 Attention Required',flags.attentionRequired);
+    flagTable('🔵 Clarifications Needed from Bidder',flags.clarificationsNeeded);
+    footer();
+
+    doc.save('GeBIZX_Evaluation_'+bidName.replace(/[^a-zA-Z0-9]/g,'_').slice(0,30)+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }catch(e){ alert('PDF generation error: '+e.message); }
+}
+
+function downloadExcel(result){
+  try{
+    var wb=XLSX.utils.book_new();
+    // Sheet 1: Summary
+    var sum=[
+      ['GBX Tender Evaluation Report'],
+      ['Tender Reference',TENDER_REF],
+      ['Bidder',(result.bidder&&result.bidder.companyName)||'Unknown'],
+      ['Evaluated By',result.meta.evaluatorName||'—'],
+      ['Evaluation Date',new Date(result.meta.evaluatedAt).toLocaleString('en-SG')],
+      ['AI Model',result.meta.model],
+      [''],
+      ['Overall Status',result.overall.status],
+      ['Status Reason',result.overall.statusReason],
+      ['Stage 2 Score',result.overall.stage2Score+'/100'],
+      ['Stage 2 Weighted Score (30%)',result.overall.stage2Weighted+' pts'],
+      [''],
+      ['DISCLAIMER',result.meta.disclaimer]
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
+
+    // Sheet 2: Stage 1
+    var s1rows=[['Check','Result','Registration Code','Grade','Evidence','Notes']];
+    var chk=((result.stage1||{}).checks)||{};
+    s1rows.push(['Debarment',(chk.debarment||{}).result||'','','',(chk.debarment||{}).evidence||'',(chk.debarment||{}).notes||'']);
+    s1rows.push(['GRA Registration',(chk.graRegistration||{}).result||'',(chk.graRegistration||{}).registrationCode||'',(chk.graRegistration||{}).grade||'',(chk.graRegistration||{}).evidence||'',(chk.graRegistration||{}).notes||'']);
+    s1rows.push(['Mandatory Briefing',(chk.briefingAttendance||{}).result||'','',(((chk.briefingAttendance||{}).attendeeNames)||[]).join(', '),(chk.briefingAttendance||{}).evidence||'',(chk.briefingAttendance||{}).notes||'']);
+    s1rows.push(['Ivalua SaaS',(chk.ivaluaSaaS||{}).result||'','',(chk.ivaluaSaaS||{}).proposedPlatform||'',(chk.ivaluaSaaS||{}).evidence||'',(chk.ivaluaSaaS||{}).notes||'']);
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s1rows),'Stage 1');
+
+    // Sheet 3: Stage 2
+    var s2rows=[['Criterion','Max Points','Score','% of Max','Band','Requires Human Review','Strengths','Gaps','Clarifications Needed']];
+    var criteria=(result.stage2||{}).criteria||{};
+    Object.keys(CRITERIA_LABELS).forEach(function(k){
+      var c=criteria[k]||{};
+      s2rows.push([CRITERIA_LABELS[k],c.maxPoints||0,c.score||0,c.maxPoints?Math.round((c.score||0)/(c.maxPoints)*100)+'%':'—',c.band||'—',c.requiresHumanReview?'YES':'no',(c.strengths||[]).join(' | '),(c.gaps||[]).join(' | '),(c.clarificationsNeeded||[]).join(' | ')]);
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s2rows),'Stage 2 Criteria');
+
+    // Sheet 4: Checklist
+    var clrows=[['#','Section','Status','Notes','Document Reference']];
+    var items=((result.checklist||{}).items)||{};
+    var n=1;
+    Object.keys(CHECKLIST_LABELS).forEach(function(k){
+      var it=items[k]||{};
+      clrows.push([n++,CHECKLIST_LABELS[k],it.status||'UNCERTAIN',it.notes||'',it.documentRef||'']);
+    });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(clrows),'Checklist');
+
+    // Sheet 5: Flags
+    var frows=[['Flag Type','Criterion','Description','Document Reference']];
+    var flags=result.flags||{};
+    (flags.humanInterventionRequired||[]).forEach(function(f){ frows.push(['HUMAN INTERVENTION',f.criterion,f.description,f.documentRef||'']); });
+    (flags.attentionRequired||[]).forEach(function(f){ frows.push(['ATTENTION',f.criterion,f.description,f.documentRef||'']); });
+    (flags.clarificationsNeeded||[]).forEach(function(f){ frows.push(['CLARIFICATION',f.criterion,f.description,f.documentRef||'']); });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(frows),'Flags');
+
+    var bidName=((result.bidder||{}).companyName||'Bidder').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30);
+    XLSX.writeFile(wb,'GeBIZX_Evaluation_'+bidName+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  }catch(e){ alert('Excel generation error: '+e.message); }
+}
+</script>
+
+<!-- H: Chat Module -->
+<script>
+function buildChatSystem(){
+  var corpus = AppState.combinedText.slice(0,300000);
+  var evalSum = AppState.evaluationResult ? JSON.stringify({
+    bidder:AppState.evaluationResult.bidder,
+    overall:AppState.evaluationResult.overall,
+    stage1Summary:AppState.evaluationResult.stage1,
+    stage2Scores:Object.keys((AppState.evaluationResult.stage2.criteria||{})).reduce(function(acc,k){
+      var c=AppState.evaluationResult.stage2.criteria[k];
+      acc[k]={score:c.score,maxPoints:c.maxPoints,band:c.band};
+      return acc;
+    },{}),
+    flags:AppState.evaluationResult.flags
+  }) : '{}';
+  return 'You are an expert procurement evaluation assistant helping Ministry of Finance officers review a tender submission for ITT FINHQ0ETT26000001 (GeBIZ X Procurement System).\n\nEVALUATION SUMMARY:\n'+evalSum+'\n\nDOCUMENT CORPUS (first 300k chars):\n===BEGIN===\n'+corpus+'\n===END===\n\nAnswer questions about this submission based ONLY on the provided documents and evaluation summary. Cite specific document names and sections. Be precise, professional, and helpful. If information is not in the documents, say so clearly.';
+}
+
+function appendChatMsg(role,content,streaming){
+  var msgs = document.getElementById('chat-messages');
+  var div=document.createElement('div');
+  div.className='chat-msg '+role;
+  if(role==='assistant'){
+    var lbl=document.createElement('div');
+    lbl.className='msg-label';
+    lbl.textContent='CLAUDE ASSISTANT';
+    div.appendChild(lbl);
+  }
+  var txt=document.createElement('div');
+  txt.id=streaming?'streaming-msg':'';
+  txt.textContent=content;
+  div.appendChild(txt);
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  return txt;
+}
+
+async function sendChatMessage(){
+  var input=document.getElementById('chat-input');
+  var text=input.value.trim();
+  if(!text||!AppState.apiKey) return;
+  input.value='';
+  appendChatMsg('user',text);
+  AppState.chatMessages.push({role:'user',content:text});
+  var streamEl=appendChatMsg('assistant','','streaming');
+  var full='';
+  try{
+    var msgs=AppState.chatMessages.map(function(m){return {role:m.role,content:m.content};});
+    await callClaudeStream(msgs,buildChatSystem(),
+      function(chunk){ full+=chunk; streamEl.textContent=full; streamEl.parentElement.parentElement.scrollTop=streamEl.parentElement.parentElement.scrollHeight; },
+      function(){ streamEl.id=''; AppState.chatMessages.push({role:'assistant',content:full}); }
+    );
+  }catch(e){
+    streamEl.textContent='Error: '+e.message;
+    streamEl.style.color='var(--red)';
+  }
+}
+</script>
+
+<!-- J: Auth Module -->
+<script>
+// ─────────────────────────────────────────────────────────────────
+// PASSWORD CONFIGURATION
+// To change password: generate a new hash using the "Change Password"
+// section on the login screen, then replace PASSWORD_HASH below.
+// Current password: iloveGBX
+// ─────────────────────────────────────────────────────────────────
+var PASSWORD_HASH = '0de59eac7b1d625d3797923be369f0095fb216fd0db944f6501958f36a20c538';
+
+async function sha256(str){
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');
+}
+
+async function initAuth(){
+  var overlay = document.getElementById('login-overlay');
+  var logoutBtn = document.getElementById('btn-logout');
+
+  // Already authenticated this session?
+  if(sessionStorage.getItem('gbx_auth')==='true'){
+    overlay.style.display='none';
+    logoutBtn.style.display='block';
+    return;
+  }
+  overlay.style.display='flex';
+
+  // Login button
+  document.getElementById('login-btn').addEventListener('click', async function(){
+    var pw = document.getElementById('login-pw-input').value;
+    var errEl = document.getElementById('login-error');
+    if(!pw){ errEl.textContent='Please enter a password.'; return; }
+    this.disabled=true; this.textContent='Checking…';
+    var hash = await sha256(pw);
+    if(hash === PASSWORD_HASH){
+      sessionStorage.setItem('gbx_auth','true');
+      overlay.style.display='none';
+      logoutBtn.style.display='block';
+    } else {
+      errEl.textContent='Incorrect password. Please try again.';
+      document.getElementById('login-pw-input').value='';
+      document.getElementById('login-pw-input').focus();
+    }
+    this.disabled=false; this.textContent='Access Evaluation Tool';
+  });
+
+  // Enter key
+  document.getElementById('login-pw-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter') document.getElementById('login-btn').click();
+  });
+
+  // Show/hide password toggle
+  document.getElementById('login-eye-btn').addEventListener('click',function(){
+    var inp = document.getElementById('login-pw-input');
+    inp.type = inp.type==='password' ? 'text' : 'password';
+    this.textContent = inp.type==='password' ? '👁' : '🙈';
+  });
+
+  // Logout
+  logoutBtn.addEventListener('click',function(){
+    sessionStorage.removeItem('gbx_auth');
+    overlay.style.display='flex';
+    logoutBtn.style.display='none';
+    document.getElementById('login-pw-input').value='';
+    document.getElementById('login-error').textContent='';
+  });
+
+  // Hash generator (for admin password change)
+  document.getElementById('gen-hash-btn').addEventListener('click', async function(){
+    var newPw = document.getElementById('gen-pw-input').value.trim();
+    if(!newPw){ document.getElementById('hash-out').textContent='Please enter a password first.'; return; }
+    var h = await sha256(newPw);
+    document.getElementById('hash-out').textContent=h;
+  });
+}
+</script>
+
+<!-- I: UI & Bootstrap -->
+<script>
+function showStep(n){
+  AppState.currentStep=n;
+  document.querySelectorAll('.step-section').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('step-'+['','setup','upload','evaluate','results'][n]).classList.add('active');
+  document.querySelectorAll('.step-pill').forEach(function(p){
+    var pn=parseInt(p.dataset.step);
+    p.classList.remove('active','done');
+    if(pn===n) p.classList.add('active');
+    else if(pn<n) p.classList.add('done');
+  });
+  window.scrollTo(0,0);
+}
+
+function updateTokenDisplay(){
+  var totalFiles=AppState.files.length;
+  if(!totalFiles){ document.getElementById('token-display').style.display='none'; return; }
+  var corpus=buildCorpus();
+  var est=estimateTokens(corpus);
+  AppState.tokenEstimate=est;
+  var cost=estimateCost(est);
+  var box=document.getElementById('token-info-box');
+  var isLarge=est>800000;
+  box.className='token-info'+(isLarge?' token-warn':'');
+  document.getElementById('token-text').textContent='~'+est.toLocaleString()+' estimated tokens across '+totalFiles+' file(s) | Est. API cost: ~$'+cost+' USD'+(isLarge?' ⚠️ Large — chunked summarisation will be applied':'');
+  document.getElementById('token-display').style.display='block';
+  document.getElementById('eval-file-count').textContent=totalFiles;
+  document.getElementById('eval-token-count').textContent=est.toLocaleString();
+  document.getElementById('eval-cost-est').textContent='~$'+cost;
+}
+
+function renderFileTree(){
+  var tree=document.getElementById('file-tree');
+  if(!AppState.files.length){ tree.innerHTML='<div style="color:var(--g500);font-size:13px;padding:8px">No files uploaded yet.</div>'; return; }
+  var html='';
+  AppState.files.forEach(function(f){
+    var icon = f.isParentZip?'📦':fileExt(f.name)==='pdf'?'📄':fileExt(f.name)==='docx'?'📝':(['xlsx','xls','csv'].indexOf(fileExt(f.name))>-1)?'📊':'pptx'===fileExt(f.name)?'📊':'🗒️';
+    var statusHtml = f.extractionStatus==='done'?'<span class="badge badge-green">✅ Done</span>':f.extractionStatus==='partial'?'<span class="badge badge-amber">⚠️ Partial</span>':f.extractionStatus==='error'?'<span class="badge badge-red">❌ Error</span>':'<span class="badge badge-grey"><span class="spinner"></span> Processing</span>';
+    var size=f.sizeBytes>1048576?(f.sizeBytes/1048576).toFixed(1)+'MB':f.sizeBytes>1024?(f.sizeBytes/1024).toFixed(0)+'KB':f.sizeBytes+'B';
+    html+='<div class="file-row"><span class="file-icon">'+icon+'</span><span class="file-name">'+esc(f.name)+'</span><span class="file-size">'+size+'</span><span class="file-status">'+statusHtml+'</span></div>';
+    if(f.children&&f.children.length){
+      f.children.forEach(function(c){
+        var cIcon=fileExt(c.name)==='pdf'?'📄':(['xlsx','xls','csv'].indexOf(fileExt(c.name))>-1)?'📊':'docx'===fileExt(c.name)?'📝':'🗒️';
+        var cSize=c.sizeBytes>1048576?(c.sizeBytes/1048576).toFixed(1)+'MB':c.sizeBytes>1024?(c.sizeBytes/1024).toFixed(0)+'KB':c.sizeBytes+'B';
+        var cStatus=c.extractionStatus==='done'?'<span class="badge badge-green">✅</span>':c.extractionStatus==='error'?'<span class="badge badge-red">❌</span>':'<span class="badge badge-amber">⚠️</span>';
+        html+='<div class="file-row child"><span style="color:var(--g500);font-size:11px;width:16px">└</span><span class="file-icon">'+cIcon+'</span><span class="file-name">'+esc(c.name)+'</span><span class="file-size">'+cSize+'</span><span class="file-status">'+cStatus+'</span></div>';
+      });
+    }
+  });
+  tree.innerHTML=html;
+}
+
+async function processFiles(fileList){
+  var totalSize=0;
+  for(var i=0;i<fileList.length;i++) totalSize+=fileList[i].size;
+  if(totalSize>200*1024*1024){
+    document.getElementById('size-warning').style.display='block';
+    document.getElementById('size-warn-text').textContent='Total upload size exceeds 200MB. Processing may be slow. Consider uploading fewer files.';
+  }
+  for(var j=0;j<fileList.length;j++){
+    var file=fileList[j];
+    if(file.size>50*1024*1024){
+      document.getElementById('size-warning').style.display='block';
+      document.getElementById('size-warn-text').textContent=file.name+' is larger than 50MB. It will be processed but extraction may be incomplete.';
+    }
+    var rec=await parseFile(file);
+    AppState.files.push(rec);
+    renderFileTree();
+  }
+  updateTokenDisplay();
+}
+
+function init(){
+  // Initialise auth (login screen)
+  initAuth();
+
+  // Set pdf.js worker
+  if(typeof pdfjsLib!=='undefined') pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // Restore API key
+  if(AppState.apiKey) document.getElementById('api-key-input').value=AppState.apiKey;
+
+  // API key save
+  document.getElementById('btn-save-key').addEventListener('click',function(){
+    AppState.apiKey=document.getElementById('api-key-input').value.trim();
+    sessionStorage.setItem('gbx_eval_key',AppState.apiKey);
+    document.getElementById('api-test-result').textContent=AppState.apiKey?'✅ Key saved to session':'';
+    document.getElementById('api-test-result').style.color=AppState.apiKey?'var(--green)':'';
+  });
+  document.getElementById('btn-clear-key').addEventListener('click',function(){
+    AppState.apiKey='';
+    sessionStorage.removeItem('gbx_eval_key');
+    document.getElementById('api-key-input').value='';
+    document.getElementById('api-test-result').textContent='Key cleared';
+    document.getElementById('api-test-result').style.color='var(--g500)';
+  });
+  document.getElementById('btn-test-api').addEventListener('click',testAPIConnection);
+  document.getElementById('model-select').addEventListener('change',function(){ AppState.model=this.value; });
+
+  // Step navigation
+  document.getElementById('btn-step1-next').addEventListener('click',function(){ showStep(2); });
+  document.getElementById('btn-step2-back').addEventListener('click',function(){ showStep(1); });
+  document.getElementById('btn-step2-next').addEventListener('click',function(){
+    if(!AppState.files.length){ alert('Please upload at least one file before proceeding.'); return; }
+    showStep(3);
+  });
+  document.getElementById('btn-step3-back').addEventListener('click',function(){ showStep(2); });
+  document.getElementById('btn-clear-files').addEventListener('click',function(){
+    AppState.files=[];
+    renderFileTree();
+    updateTokenDisplay();
+    document.getElementById('size-warning').style.display='none';
+  });
+
+  // Eval
+  document.getElementById('btn-run-eval').addEventListener('click',function(){
+    AppState.evaluatorName=document.getElementById('evaluator-name-input').value.trim()||'Evaluation Officer';
+    if(!AppState.apiKey){ alert('Please configure your Anthropic API key in Step 1 before evaluating.'); return; }
+    if(!AppState.files.length){ alert('No files loaded. Please go back and upload submission documents.'); return; }
+    runEvaluation();
+  });
+
+  // Report buttons
+  document.getElementById('btn-dl-pdf').addEventListener('click',function(){
+    if(!AppState.evaluationResult){ alert('No evaluation results to export.'); return; }
+    downloadPDF(AppState.evaluationResult);
+  });
+  document.getElementById('btn-dl-excel').addEventListener('click',function(){
+    if(!AppState.evaluationResult){ alert('No evaluation results to export.'); return; }
+    downloadExcel(AppState.evaluationResult);
+  });
+  document.getElementById('btn-new-eval').addEventListener('click',function(){
+    if(!confirm('Start a new evaluation? This will clear all current results.')) return;
+    AppState.files=[];AppState.evaluationResult=null;AppState.chatMessages=[];AppState.combinedText='';
+    document.getElementById('chat-messages').innerHTML='<div class="chat-msg assistant"><div class="msg-label">CLAUDE ASSISTANT</div>Hi! Upload and evaluate a submission to begin asking questions.</div>';
+    document.getElementById('status-log').innerHTML='<div style="color:#9ca3af;font-style:italic">Waiting to start evaluation…</div>';
+    document.getElementById('chat-toggle').style.display='none';
+    document.getElementById('chat-panel').classList.remove('open');
+    showStep(2);
+  });
+
+  // Drop zone
+  var dz=document.getElementById('drop-zone');
+  dz.addEventListener('click',function(){ document.getElementById('file-input').click(); });
+  dz.addEventListener('dragover',function(e){ e.preventDefault();dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave',function(){ dz.classList.remove('dragover'); });
+  dz.addEventListener('drop',function(e){
+    e.preventDefault();dz.classList.remove('dragover');
+    if(e.dataTransfer.files.length) processFiles(e.dataTransfer.files);
+  });
+  document.getElementById('file-input').addEventListener('change',function(e){
+    if(e.target.files.length) processFiles(e.target.files);
+    e.target.value='';
+  });
+
+  // Chat
+  document.getElementById('chat-toggle').addEventListener('click',function(){
+    document.getElementById('chat-panel').classList.toggle('open');
+    this.textContent=document.getElementById('chat-panel').classList.contains('open')?'💬 Ask Claude About This Submission ▼':'💬 Ask Claude About This Submission ▲';
+  });
+  document.getElementById('chat-close-btn').addEventListener('click',function(){
+    document.getElementById('chat-panel').classList.remove('open');
+    document.getElementById('chat-toggle').textContent='💬 Ask Claude About This Submission ▲';
+  });
+  document.getElementById('btn-chat-send').addEventListener('click',sendChatMessage);
+  document.getElementById('chat-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault();sendChatMessage(); }
+  });
+  document.getElementById('btn-chat-clear').addEventListener('click',function(){
+    AppState.chatMessages=[];
+    document.getElementById('chat-messages').innerHTML='<div class="chat-msg assistant"><div class="msg-label">CLAUDE ASSISTANT</div>Chat history cleared. What would you like to know about the submission?</div>';
+  });
+
+  renderFileTree();
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
