@@ -334,7 +334,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
   <div class="card">
     <div class="card-title">🔑 Configure API Access</div>
     <div class="disclaimer-box">
-      ⚠️ <strong>Important:</strong> This tool uses Anthropic Claude AI to analyse tender submissions. A valid Anthropic API key is required. Your key is stored only in this browser session and is cleared when you close this tab.
+      🔐 <strong>API Key Storage:</strong> Your key is encrypted with your login password and saved in this browser. It auto-loads next time you log in. Click <strong>Clear</strong> to remove it from all storage.
     </div>
     <div class="form-group">
       <label>Anthropic API Key</label>
@@ -557,6 +557,7 @@ main{max-width:1100px;margin:0 auto;padding:28px 20px}
 <script>
 var AppState = {
   apiKey: sessionStorage.getItem('gbx_eval_key') || '',
+  sessionPassword: '',
   model: 'claude-sonnet-4-5',
   files: [],
   combinedText: '',
@@ -1635,6 +1636,30 @@ async function sha256(str){
   return Array.from(new Uint8Array(buf)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');
 }
 
+// ── Crypto helpers for API key encryption ──
+async function deriveKey(password, salt){
+  var keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:salt, iterations:100000, hash:'SHA-256'},
+    keyMaterial, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
+  );
+}
+async function encryptAPIKey(apiKey, password){
+  var salt = crypto.getRandomValues(new Uint8Array(16));
+  var iv   = crypto.getRandomValues(new Uint8Array(12));
+  var key  = await deriveKey(password, salt);
+  var enc  = await crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, key, new TextEncoder().encode(apiKey));
+  var combined = new Uint8Array(salt.length + iv.length + enc.byteLength);
+  combined.set(salt,0); combined.set(iv,16); combined.set(new Uint8Array(enc),28);
+  return btoa(String.fromCharCode(...combined));
+}
+async function decryptAPIKey(encoded, password){
+  var combined = Uint8Array.from(atob(encoded), function(c){return c.charCodeAt(0);});
+  var key = await deriveKey(password, combined.slice(0,16));
+  var dec = await crypto.subtle.decrypt({name:'AES-GCM', iv:combined.slice(16,28)}, key, combined.slice(28));
+  return new TextDecoder().decode(dec);
+}
+
 async function initAuth(){
   var overlay = document.getElementById('login-overlay');
   var logoutBtn = document.getElementById('btn-logout');
@@ -1655,7 +1680,20 @@ async function initAuth(){
     this.disabled=true; this.textContent='Checking…';
     var hash = await sha256(pw);
     if(hash === PASSWORD_HASH){
+      AppState.sessionPassword = pw;
       sessionStorage.setItem('gbx_auth','true');
+      // Auto-decrypt saved API key if one exists
+      var savedEnc = localStorage.getItem('gbx_enc_key');
+      if(savedEnc){
+        try{
+          var decrypted = await decryptAPIKey(savedEnc, pw);
+          AppState.apiKey = decrypted;
+          sessionStorage.setItem('gbx_eval_key', decrypted);
+          document.getElementById('api-key-input').value = decrypted;
+          document.getElementById('api-test-result').textContent = '🔓 API key loaded from saved storage';
+          document.getElementById('api-test-result').style.color = 'var(--green)';
+        }catch(e){ /* key was saved with a different password - ignore */ }
+      }
       overlay.style.display='none';
       logoutBtn.style.display='block';
     } else {
@@ -1680,11 +1718,16 @@ async function initAuth(){
 
   // Logout
   logoutBtn.addEventListener('click',function(){
+    AppState.sessionPassword='';
+    AppState.apiKey='';
     sessionStorage.removeItem('gbx_auth');
+    sessionStorage.removeItem('gbx_eval_key');
     overlay.style.display='flex';
     logoutBtn.style.display='none';
     document.getElementById('login-pw-input').value='';
     document.getElementById('login-error').textContent='';
+    document.getElementById('api-key-input').value='';
+    document.getElementById('api-test-result').textContent='';
   });
 
   // Hash generator (for admin password change)
@@ -1780,18 +1823,34 @@ function init(){
   // Restore API key
   if(AppState.apiKey) document.getElementById('api-key-input').value=AppState.apiKey;
 
-  // API key save
-  document.getElementById('btn-save-key').addEventListener('click',function(){
-    AppState.apiKey=document.getElementById('api-key-input').value.trim();
-    sessionStorage.setItem('gbx_eval_key',AppState.apiKey);
-    document.getElementById('api-test-result').textContent=AppState.apiKey?'✅ Key saved to session':'';
-    document.getElementById('api-test-result').style.color=AppState.apiKey?'var(--green)':'';
+  // API key save — encrypts and persists across sessions
+  document.getElementById('btn-save-key').addEventListener('click', async function(){
+    var key = document.getElementById('api-key-input').value.trim();
+    if(!key){ document.getElementById('api-test-result').textContent='Please enter an API key first.'; return; }
+    AppState.apiKey = key;
+    sessionStorage.setItem('gbx_eval_key', key);
+    var resultEl = document.getElementById('api-test-result');
+    if(AppState.sessionPassword){
+      try{
+        var enc = await encryptAPIKey(key, AppState.sessionPassword);
+        localStorage.setItem('gbx_enc_key', enc);
+        resultEl.textContent = '✅ API key saved — auto-loads on next login';
+        resultEl.style.color = 'var(--green)';
+      }catch(e){
+        resultEl.textContent = '✅ Key saved to session (encryption failed: '+e.message+')';
+        resultEl.style.color = 'var(--amber)';
+      }
+    } else {
+      resultEl.textContent = '✅ Key saved to session';
+      resultEl.style.color = 'var(--green)';
+    }
   });
   document.getElementById('btn-clear-key').addEventListener('click',function(){
     AppState.apiKey='';
     sessionStorage.removeItem('gbx_eval_key');
+    localStorage.removeItem('gbx_enc_key');
     document.getElementById('api-key-input').value='';
-    document.getElementById('api-test-result').textContent='Key cleared';
+    document.getElementById('api-test-result').textContent='Key cleared from all storage';
     document.getElementById('api-test-result').style.color='var(--g500)';
   });
   document.getElementById('btn-test-api').addEventListener('click',testAPIConnection);
