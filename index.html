@@ -1634,7 +1634,7 @@ function appendChatMsg(role,content,streaming){
 async function sendChatMessage(){
   var input=document.getElementById('chat-input');
   var text=input.value.trim();
-  if(!text||!AppState.apiKey) return;
+  if(!text) return;
   input.value='';
   appendChatMsg('user',text);
   AppState.chatMessages.push({role:'user',content:text});
@@ -1949,7 +1949,7 @@ function init(){
   // Eval
   document.getElementById('btn-run-eval').addEventListener('click',function(){
     AppState.evaluatorName=document.getElementById('evaluator-name-input').value.trim()||'Evaluation Officer';
-    if(!AppState.apiKey){ alert('Please configure your Anthropic API key in Step 1 before evaluating.'); return; }
+    if(!WORKER_URL){ alert('Worker URL not configured. Contact your administrator.'); return; }
     if(!AppState.files.length){ alert('No files loaded. Please go back and upload submission documents.'); return; }
     runEvaluation();
   });
