@@ -914,22 +914,49 @@ function getAPIEndpoint(){ return (WORKER_URL||'').replace(/\/+$/,'') + '/v1/mes
 async function callClaude(systemPrompt, userMessage, maxTokens){
   maxTokens = maxTokens||8000;
   if(!WORKER_URL) throw new Error('Worker URL not configured. Ask your administrator to complete Cloudflare setup.');
+  var resp;
+  try{
+    resp = await fetch(getAPIEndpoint(),{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({
+        model: AppState.model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages:[{role:'user',content:userMessage}]
+      })
+    });
+  }catch(netErr){
+    throw new Error('Network error reaching Worker: '+netErr.message+'. Check your internet connection.');
+  }
+  if(!resp.ok){
+    var rawText = await resp.text().catch(function(){ return ''; });
+    var err = {};
+    try{ err = JSON.parse(rawText); }catch(e){}
+    var msg = (err.error && err.error.message)
+           || (typeof err.error === 'string' ? err.error : null)
+           || (err.message)
+           || rawText.slice(0,200)
+           || ('HTTP '+resp.status+' from Claude API');
+    throw new Error('API error (HTTP '+resp.status+'): '+msg);
+  }
+  var data = await resp.json();
+  if(!data.content||!data.content[0]) throw new Error('Unexpected API response format');
+  return data.content[0].text;
+}
+
+async function callClaudeTest(){
   var resp = await fetch(getAPIEndpoint(),{
     method:'POST',
     headers:{'content-type':'application/json'},
-    body: JSON.stringify({
-      model: AppState.model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages:[{role:'user',content:userMessage}]
-    })
+    body: JSON.stringify({model:AppState.model,max_tokens:5,messages:[{role:'user',content:'ping'}]})
   });
   if(!resp.ok){
-    var err = await resp.json().catch(function(){ return {}; });
-    throw new Error((err.error && err.error.message)||(err.error)||('API error '+resp.status));
+    var t = await resp.text().catch(function(){return '';});
+    throw new Error('HTTP '+resp.status+': '+t.slice(0,100));
   }
-  var data = await resp.json();
-  return data.content[0].text;
+  var d = await resp.json();
+  return d.content&&d.content[0]?'ok':'empty';
 }
 
 async function callClaudeStream(messages, systemPrompt, onChunk, onDone){
@@ -986,20 +1013,23 @@ function parseJSONFromResponse(text){
 
 async function testAPIConnection(){
   var el = document.getElementById('api-test-result');
-  el.textContent='Testing…'; el.style.color='var(--g500)';
+  el.textContent='Testing connection…'; el.style.color='var(--g500)';
   if(!WORKER_URL){ el.textContent='⚠️ Worker URL not set — see admin setup'; el.style.color='var(--amber-d)'; return; }
   try{
-    var resp = await fetch(WORKER_URL.replace(/\/+$/,'')+'/health');
-    var data = await resp.json();
-    if(data.configured){
-      el.textContent='✅ Connected — API key configured on server';
-      el.style.color='var(--green)';
-    } else {
-      el.textContent='⚠️ Worker reachable but API key not yet set — use Admin panel';
-      el.style.color='var(--amber-d)';
+    // Step 1: health check
+    var hResp = await fetch(WORKER_URL.replace(/\/+$/,'')+'/health');
+    var hData = await hResp.json();
+    if(!hData.configured){
+      el.textContent='⚠️ Worker reachable but API key not yet set — use Admin panel to set it';
+      el.style.color='var(--amber-d)'; return;
     }
+    el.textContent='✅ Worker OK — testing Claude API…'; el.style.color='var(--green)';
+    // Step 2: real API call
+    var result = await callClaudeTest();
+    el.textContent='✅ Claude API connected and responding — ready to evaluate!';
+    el.style.color='var(--green)';
   }catch(e){
-    el.textContent='❌ Cannot reach Worker: '+e.message;
+    el.textContent='❌ '+e.message;
     el.style.color='var(--red)';
   }
 }
