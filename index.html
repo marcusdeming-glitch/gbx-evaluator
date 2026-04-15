@@ -911,7 +911,9 @@ function estimateCost(tokens){ return (tokens*3/1000000 + 12000*15/1000000).toFi
 <script>
 function getAPIEndpoint(){ return (WORKER_URL||'').replace(/\/+$/,'') + '/v1/messages'; }
 
-async function callClaude(systemPrompt, userMessage, maxTokens){
+// callClaude uses streaming mode to avoid Cloudflare's 30s timeout.
+// Claude sends SSE chunks immediately; we collect them and return the assembled text.
+async function callClaude(systemPrompt, userMessage, maxTokens, onProgress){
   maxTokens = maxTokens||8000;
   if(!WORKER_URL) throw new Error('Worker URL not configured. Ask your administrator to complete Cloudflare setup.');
   var resp;
@@ -922,6 +924,7 @@ async function callClaude(systemPrompt, userMessage, maxTokens){
       body: JSON.stringify({
         model: AppState.model,
         max_tokens: maxTokens,
+        stream: true,
         system: systemPrompt,
         messages:[{role:'user',content:userMessage}]
       })
@@ -940,9 +943,31 @@ async function callClaude(systemPrompt, userMessage, maxTokens){
            || ('HTTP '+resp.status+' from Claude API');
     throw new Error('API error (HTTP '+resp.status+'): '+msg);
   }
-  var data = await resp.json();
-  if(!data.content||!data.content[0]) throw new Error('Unexpected API response format');
-  return data.content[0].text;
+  // Collect streaming SSE chunks into complete text
+  var reader = resp.body.getReader();
+  var decoder = new TextDecoder();
+  var fullText = '';
+  var chunkCount = 0;
+  while(true){
+    var read = await reader.read();
+    if(read.done) break;
+    var lines = decoder.decode(read.value).split('\n');
+    for(var li=0;li<lines.length;li++){
+      var line = lines[li];
+      if(!line.startsWith('data: ')||line==='data: [DONE]') continue;
+      try{
+        var evt = JSON.parse(line.slice(6));
+        if(evt.type==='error') throw new Error((evt.error&&evt.error.message)||'Stream error');
+        if(evt.type==='content_block_delta'&&evt.delta&&evt.delta.text){
+          fullText += evt.delta.text;
+          chunkCount++;
+          if(onProgress&&chunkCount%20===0) onProgress(fullText.length);
+        }
+      }catch(parseErr){ if(parseErr.message!=='Stream error') continue; else throw parseErr; }
+    }
+  }
+  if(!fullText) throw new Error('Empty response from Claude API — the request may have been blocked or the model returned nothing.');
+  return fullText;
 }
 
 async function callClaudeTest(){
@@ -1161,9 +1186,12 @@ async function runEvaluation(){
     var userMsg = 'Below is the full extracted text from the bidder\'s tender submission for '+TENDER_REF+'. Evaluate as instructed.\n\n===BEGIN DOCUMENTS===\n'+evalCorpus+'\n===END DOCUMENTS===';
 
     // Call 1: Stage 1 + Stage 2
-    logStatus('📡 Calling Claude API — Stage 1 & Stage 2 evaluation (this may take 30-60s)…');
-    var raw1 = await callClaude(SYSTEM_PROMPT_EVAL, userMsg, 8000);
-    logStatus('✅ Stage 1 & Stage 2 response received','ok');
+    logStatus('📡 Calling Claude API — Stage 1 & Stage 2 evaluation (streaming, please wait)…');
+    var s1LogEl = document.querySelector('#status-log .log-line:last-child');
+    var raw1 = await callClaude(SYSTEM_PROMPT_EVAL, userMsg, 8000, function(chars){
+      if(s1LogEl) s1LogEl.textContent='📡 Stage 1 & Stage 2 — receiving… ('+chars+' chars so far)';
+    });
+    logStatus('✅ Stage 1 & Stage 2 response received ('+raw1.length+' chars)','ok');
 
     var result1;
     try{ result1 = parseJSONFromResponse(raw1); }
@@ -1175,9 +1203,12 @@ async function runEvaluation(){
     }
 
     // Call 2: Checklist
-    logStatus('📡 Calling Claude API — Submission checklist analysis…');
-    var raw2 = await callClaude(SYSTEM_PROMPT_CHECKLIST, userMsg, 4000);
-    logStatus('✅ Checklist response received','ok');
+    logStatus('📡 Calling Claude API — Submission checklist analysis (streaming)…');
+    var s2LogEl = document.querySelector('#status-log .log-line:last-child');
+    var raw2 = await callClaude(SYSTEM_PROMPT_CHECKLIST, userMsg, 4000, function(chars){
+      if(s2LogEl) s2LogEl.textContent='📡 Checklist analysis — receiving… ('+chars+' chars so far)';
+    });
+    logStatus('✅ Checklist response received ('+raw2.length+' chars)','ok');
 
     var result2;
     try{ result2 = parseJSONFromResponse(raw2); }
